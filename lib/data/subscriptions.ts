@@ -1,7 +1,7 @@
 // SubCheck Subscription Master Data
 // Updated with 2024-2025 Japanese market pricing
 
-import { Subscription } from '@/types';
+import { Subscription, SubscriptionCategory } from '@/types';
 
 export const SUBSCRIPTION_DATA: Subscription[] = [
   // Video Streaming Services
