@@ -28,7 +28,7 @@ export default function Home() {
             年間の無駄遣いを可視化します
           </p>
           <div className="mb-12">
-            <Link href="/select">
+            <Link href="/diagnosis/select">
               <Button size="lg" className="text-lg px-8 py-6 bg-blue-600 hover:bg-blue-700">
                 📊 診断開始
               </Button>
@@ -115,7 +115,7 @@ export default function Home() {
           <p className="text-xl text-blue-100 mb-8">
             わずか3分で、あなたの年間浪費額が分かります
           </p>
-          <Link href="/select">
+          <Link href="/diagnosis/select">
             <Button 
               size="lg" 
               variant="secondary"
