@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import WasteChart from '@/components/charts/WasteChart';
 import ResultsSummary from '@/components/shared/ResultsSummary';
+import SocialShareButtons from '@/components/shared/SocialShareButtons';
 import { useDiagnosisSession } from '@/lib/hooks/useDiagnosisSession';
 import { SubscriptionService } from '@/lib/services/SubscriptionService';
 import { Subscription } from '@/types';
@@ -60,9 +61,10 @@ export default function ResultsPage() {
     router.push('/diagnosis/select');
   };
 
+  const [showShareButtons, setShowShareButtons] = useState(false);
+
   const handleShare = () => {
-    // TODO: Implement sharing functionality in next phase
-    console.log('Share functionality will be implemented in Phase 4');
+    setShowShareButtons(!showShareButtons);
   };
 
   if (isLoading || servicesLoading) {
@@ -151,6 +153,16 @@ export default function ResultsPage() {
               onRestart={handleRestart}
               onShare={handleShare}
             />
+          )}
+
+          {/* Social Share Section */}
+          {diagnosisResult && showShareButtons && (
+            <div className="mt-8">
+              <SocialShareButtons
+                diagnosisResult={diagnosisResult}
+                className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm"
+              />
+            </div>
           )}
         </div>
       </main>
