@@ -53,10 +53,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T015 [P] [US1] Create landing page component at app/page.tsx
-- [ ] T016 [P] [US1] Create subscription selection page at app/diagnosis/select/page.tsx
-- [ ] T017 [P] [US1] Create usage frequency input page at app/diagnosis/usage/page.tsx
-- [ ] T018 [P] [US1] Create results display page at app/diagnosis/results/page.tsx
+- [X] T015 [P] [US1] Create landing page component at app/page.tsx
+- [X] T016 [P] [US1] Create subscription selection page at app/diagnosis/select/page.tsx
+- [X] T017 [P] [US1] Create usage frequency input page at app/diagnosis/usage/page.tsx
+- [X] T018 [P] [US1] Create results display page at app/diagnosis/results/page.tsx
 - [ ] T019 [P] [US1] Create subscription selector component at components/forms/SubscriptionSelector.tsx
 - [ ] T020 [P] [US1] Create usage frequency selector component at components/forms/UsageFrequencySelector.tsx
 - [ ] T021 [P] [US1] Create results chart component at components/charts/WasteChart.tsx
