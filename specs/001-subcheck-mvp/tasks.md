@@ -17,11 +17,11 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Install and configure Vitest testing framework with React Testing Library per research.md
-- [ ] T002 [P] Install Recharts for pie chart visualization per research.md
-- [ ] T003 [P] Configure TypeScript types directory structure at types/
-- [ ] T004 [P] Create static subscription master data file at lib/data/subscriptions.ts
-- [ ] T005 [P] Setup calculation constants file at lib/calculations/constants.ts
+- [X] T001 Install and configure Vitest testing framework with React Testing Library per research.md
+- [X] T002 [P] Install Recharts for pie chart visualization per research.md
+- [X] T003 [P] Configure TypeScript types directory structure at types/
+- [X] T004 [P] Create static subscription master data file at lib/data/subscriptions.ts
+- [X] T005 [P] Setup calculation constants file at lib/calculations/constants.ts
 
 ---
 
@@ -31,15 +31,15 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create core TypeScript interfaces in types/subscription.ts
-- [ ] T007 [P] Create TypeScript interfaces in types/diagnosis.ts
-- [ ] T008 [P] Export all types from types/index.ts
-- [ ] T009 Implement LocalStorage service in lib/storage/StorageService.ts
-- [ ] T010 [P] Implement subscription service in lib/services/SubscriptionService.ts
-- [ ] T011 [P] Implement calculation service in lib/calculations/CalculationService.ts
-- [ ] T012 Create base UI components directory structure at components/ui/
-- [ ] T013 [P] Create shared layout component in app/layout.tsx
-- [ ] T014 [P] Configure Tailwind CSS globals in app/globals.css
+- [X] T006 Create core TypeScript interfaces in types/subscription.ts
+- [X] T007 [P] Create TypeScript interfaces in types/diagnosis.ts
+- [X] T008 [P] Export all types from types/index.ts
+- [X] T009 Implement LocalStorage service in lib/storage/StorageService.ts
+- [X] T010 [P] Implement subscription service in lib/services/SubscriptionService.ts
+- [X] T011 [P] Implement calculation service in lib/calculations/CalculationService.ts
+- [X] T012 Create base UI components directory structure at components/ui/
+- [X] T013 [P] Create shared layout component in app/layout.tsx
+- [X] T014 [P] Configure Tailwind CSS globals in app/globals.css
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
