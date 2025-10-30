@@ -2,14 +2,14 @@
 // Calculates waste rate and annual waste amount based on usage frequency
 
 import { UserSubscription, DiagnosisResult, FrequencyType, FrequencyBreakdown, ComparisonItem, RecommendationItem, UsageFrequency } from '@/types';
-import { FREQUENCY_MULTIPLIERS, EQUIVALENT_ITEMS, WASTE_RATE_THRESHOLDS, COLORS } from './constants';
+import { SUBSCRIPTION_DATA } from '@/lib/data/subscriptions';
 
-// Frequency multipliers based on actual usage vs paid amount
-const FREQUENCY_MULTIPLIERS: Record<FrequencyType, number> = {
-  daily: 1.0,      // Getting full value
-  weekly: 0.7,     // Getting good value
-  monthly: 0.4,    // Getting some value
-  unused: 0.0      // Getting no value (100% waste)
+// Frequency multipliers based on actual usage vs paid amount  
+const FREQUENCY_MULTIPLIERS: Record<string, number> = {
+  daily: 0.0,      // No waste - getting full value
+  weekly: 0.25,    // 25% waste
+  monthly: 0.6,    // 60% waste
+  unused: 1.0      // 100% waste
 };
 
 // Comparison examples for waste visualization
@@ -58,6 +58,10 @@ const COMPARISON_EXAMPLES: ComparisonItem[] = [
   }
 ];
 
+function getSubscriptionById(id: string) {
+  return SUBSCRIPTION_DATA.find(sub => sub.id === id);
+}
+
 export function calculateDiagnosis(userSubscriptions: UserSubscription[]): DiagnosisResult {
   let totalMonthly = 0;
   let totalWasteMonthly = 0;
@@ -73,13 +77,13 @@ export function calculateDiagnosis(userSubscriptions: UserSubscription[]): Diagn
     const subscription = getSubscriptionById(userSub.subscriptionId);
     if (!subscription) return;
 
-    const price = userSub.customPrice || subscription.price;
-    const multiplier = FREQUENCY_MULTIPLIERS[userSub.frequency];
-    const wasteAmount = price * (1 - multiplier);
+    const price = subscription.monthlyPrice;
+    const wasteMultiplier = FREQUENCY_MULTIPLIERS[userSub.usageFrequency];
+    const wasteAmount = price * wasteMultiplier;
 
     totalMonthly += price;
     totalWasteMonthly += wasteAmount;
-    frequencyBreakdown[userSub.frequency] += price;
+    frequencyBreakdown[userSub.usageFrequency as keyof FrequencyBreakdown] += price;
   });
 
   const wasteRate = totalMonthly > 0 ? Math.round((totalWasteMonthly / totalMonthly) * 100) : 0;
@@ -134,9 +138,9 @@ function generateRecommendations(userSubscriptions: UserSubscription[]): Recomme
     const subscription = getSubscriptionById(userSub.subscriptionId);
     if (!subscription) return;
 
-    const price = userSub.customPrice || subscription.price;
+    const price = subscription.monthlyPrice;
 
-    switch (userSub.frequency) {
+    switch (userSub.usageFrequency) {
       case 'unused':
         recommendations.push({
           subscriptionId: userSub.subscriptionId,
