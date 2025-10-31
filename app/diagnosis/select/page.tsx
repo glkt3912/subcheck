@@ -1,13 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import SubscriptionSelector from '@/components/forms/SubscriptionSelector';
+import CustomSubscriptionManager from '@/components/forms/CustomSubscriptionManager';
 import { useDiagnosisSession } from '@/lib/hooks/useDiagnosisSession';
 import { SubscriptionService } from '@/lib/services/SubscriptionService';
+import { CustomSubscriptionInput } from '@/lib/utils/validation';
 import { Subscription } from '@/types';
+
+type TabType = 'select' | 'custom';
 
 export default function SelectPage() {
   const router = useRouter();
@@ -19,27 +23,72 @@ export default function SelectPage() {
   } = useDiagnosisSession();
   
   const [availableServices, setAvailableServices] = useState<Subscription[]>([]);
+  const [customServices, setCustomServices] = useState<Subscription[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
-  const subscriptionService = new SubscriptionService();
+  const [activeTab, setActiveTab] = useState<TabType>('select');
+  const subscriptionService = useMemo(() => new SubscriptionService(), []);
+
+  const loadServices = useCallback(async () => {
+    setServicesLoading(true);
+    try {
+      const [allServices, customOnly] = await Promise.all([
+        subscriptionService.getAllSubscriptions(),
+        subscriptionService.getCustomSubscriptions()
+      ]);
+      setAvailableServices(allServices);
+      setCustomServices(customOnly);
+    } catch (error) {
+      console.error('Failed to load services:', error);
+      setAvailableServices([]);
+      setCustomServices([]);
+    } finally {
+      setServicesLoading(false);
+    }
+  }, [subscriptionService]);
 
   useEffect(() => {
-    const loadServices = async () => {
-      try {
-        const services = await subscriptionService.getAllSubscriptions();
-        setAvailableServices(services);
-      } catch (error) {
-        console.error('Failed to load services:', error);
-        setAvailableServices([]);
-      } finally {
-        setServicesLoading(false);
-      }
-    };
-
     loadServices();
-  }, []);
+  }, [loadServices]);
 
   const handleSelectionChange = (serviceIds: string[]) => {
     setSelectedServices(serviceIds);
+  };
+
+  const handleAddCustomSubscription = async (customSubscription: CustomSubscriptionInput) => {
+    try {
+      await subscriptionService.addCustomSubscription(customSubscription);
+      await loadServices(); // Refresh services list
+      setActiveTab('select'); // Switch back to selection tab
+    } catch (error) {
+      console.error('Failed to add custom subscription:', error);
+      throw error; // Re-throw to let the form handle the error
+    }
+  };
+
+  const handleEditCustomSubscription = async (subscriptionId: string, updatedData: CustomSubscriptionInput) => {
+    try {
+      await subscriptionService.editCustomSubscription(subscriptionId, updatedData);
+      await loadServices(); // Refresh services list
+    } catch (error) {
+      console.error('Failed to edit custom subscription:', error);
+      throw error;
+    }
+  };
+
+  const handleRemoveCustomSubscription = async (subscriptionId: string) => {
+    try {
+      const success = await subscriptionService.removeCustomSubscription(subscriptionId);
+      if (success) {
+        // Remove from selected services if it was selected
+        if (selectedServices.includes(subscriptionId)) {
+          setSelectedServices(selectedServices.filter(id => id !== subscriptionId));
+        }
+        await loadServices(); // Refresh services list
+      }
+    } catch (error) {
+      console.error('Failed to remove custom subscription:', error);
+      throw error;
+    }
   };
 
   const handleNext = () => {
@@ -114,12 +163,55 @@ export default function SelectPage() {
             </p>
           </div>
 
-          {/* Subscription Selector */}
-          <SubscriptionSelector
-            services={availableServices}
-            selectedServices={selectedServices}
-            onSelectionChange={handleSelectionChange}
-          />
+          {/* Tab Navigation */}
+          <div className="mb-6">
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('select')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'select'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  サービス選択 ({selectedServices.length}個選択中)
+                </button>
+                <button
+                  onClick={() => setActiveTab('custom')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'custom'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  カスタムサービス管理 ({customServices.length}個)
+                </button>
+              </nav>
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          <div className="mb-8">
+            {activeTab === 'select' && (
+              <SubscriptionSelector
+                services={availableServices}
+                selectedServices={selectedServices}
+                onSelectionChange={handleSelectionChange}
+              />
+            )}
+
+            {activeTab === 'custom' && (
+              <CustomSubscriptionManager
+                customSubscriptions={customServices}
+                allSubscriptions={availableServices}
+                onAddCustomSubscription={handleAddCustomSubscription}
+                onEditCustomSubscription={handleEditCustomSubscription}
+                onRemoveCustomSubscription={handleRemoveCustomSubscription}
+                isLoading={servicesLoading}
+              />
+            )}
+          </div>
 
           {/* Navigation */}
           <div className="flex justify-between">
