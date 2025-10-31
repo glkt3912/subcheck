@@ -61,7 +61,12 @@ export default function SubscriptionSelector({
   };
 
   const getServicesByCategory = (category: SubscriptionCategory) => {
-    return services.filter(service => service.category === category);
+    return services.filter(service => 
+      service && 
+      service.category === category && 
+      service.name && 
+      typeof service.monthlyPrice === 'number'
+    );
   };
 
   const renderCategorySection = (category: SubscriptionCategory) => {
@@ -95,7 +100,7 @@ export default function SubscriptionSelector({
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900">{service.name}</h3>
-                    <p className="text-sm text-gray-600">月額 ¥{service.monthlyPrice.toLocaleString()}</p>
+                    <p className="text-sm text-gray-600">月額 ¥{(service.monthlyPrice || 0).toLocaleString()}</p>
                     {service.isPopular && (
                       <span className="inline-block px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full mt-1">
                         人気
