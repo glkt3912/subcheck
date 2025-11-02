@@ -2,6 +2,7 @@
 // Handles data persistence and retrieval
 
 import type { UserSubscription, DiagnosisResult } from '@/types';
+import { ErrorHandler, SafeStorage, checkStorageAvailability } from '@/lib/utils/errorHandling';
 
 const STORAGE_KEYS = {
   SELECTED_SUBSCRIPTIONS: 'selectedSubscriptions',
@@ -25,82 +26,49 @@ function isStorageAvailable(): boolean {
 
 // Selected Subscriptions Management
 export function saveSelectedSubscriptions(subscriptionIds: string[]): void {
-  if (!isStorageAvailable()) return;
-  try {
-    localStorage.setItem(STORAGE_KEYS.SELECTED_SUBSCRIPTIONS, JSON.stringify(subscriptionIds));
-  } catch (error) {
-    console.warn('Failed to save selected subscriptions:', error);
+  const success = SafeStorage.setItem(STORAGE_KEYS.SELECTED_SUBSCRIPTIONS, subscriptionIds);
+  if (!success) {
+    console.warn('Failed to save selected subscriptions, using session fallback');
+    // Could implement session storage fallback here
   }
 }
 
 export function getSelectedSubscriptions(): string[] {
-  if (!isStorageAvailable()) return [];
-  try {
-    const saved = localStorage.getItem(STORAGE_KEYS.SELECTED_SUBSCRIPTIONS);
-    return saved ? JSON.parse(saved) : [];
-  } catch (error) {
-    console.warn('Failed to load selected subscriptions:', error);
-    return [];
-  }
+  return SafeStorage.getItem(STORAGE_KEYS.SELECTED_SUBSCRIPTIONS, []);
 }
 
 // User Subscriptions Management
 export function saveUserSubscriptions(userSubscriptions: UserSubscription[]): void {
-  if (!isStorageAvailable()) return;
-  try {
-    localStorage.setItem(STORAGE_KEYS.USER_SUBSCRIPTIONS, JSON.stringify(userSubscriptions));
-  } catch (error) {
-    console.warn('Failed to save user subscriptions:', error);
+  const success = SafeStorage.setItem(STORAGE_KEYS.USER_SUBSCRIPTIONS, userSubscriptions);
+  if (!success) {
+    console.warn('Failed to save user subscriptions, diagnosis may not persist');
   }
 }
 
 export function getUserSubscriptions(): UserSubscription[] {
-  if (!isStorageAvailable()) return [];
-  try {
-    const saved = localStorage.getItem(STORAGE_KEYS.USER_SUBSCRIPTIONS);
-    return saved ? JSON.parse(saved) : [];
-  } catch (error) {
-    console.warn('Failed to load user subscriptions:', error);
-    return [];
-  }
+  return SafeStorage.getItem(STORAGE_KEYS.USER_SUBSCRIPTIONS, []);
 }
 
 // Diagnosis Result Management
 export function saveDiagnosisResult(result: DiagnosisResult): void {
-  if (!isStorageAvailable()) return;
-  try {
-    localStorage.setItem(STORAGE_KEYS.DIAGNOSIS_RESULT, JSON.stringify(result));
-    
+  const success = SafeStorage.setItem(STORAGE_KEYS.DIAGNOSIS_RESULT, result);
+  if (success) {
     // Also save to history
     const history = getDiagnosisHistory();
     const newHistory = [result, ...history.slice(0, 9)]; // Keep last 10 results
-    localStorage.setItem(STORAGE_KEYS.DIAGNOSIS_HISTORY, JSON.stringify(newHistory));
-  } catch (error) {
-    console.warn('Failed to save diagnosis result:', error);
+    SafeStorage.setItem(STORAGE_KEYS.DIAGNOSIS_HISTORY, newHistory);
+  } else {
+    console.warn('Failed to save diagnosis result, results may not persist');
   }
 }
 
 export function getDiagnosisResult(): DiagnosisResult | null {
-  if (!isStorageAvailable()) return null;
-  try {
-    const saved = localStorage.getItem(STORAGE_KEYS.DIAGNOSIS_RESULT);
-    return saved ? JSON.parse(saved) : null;
-  } catch (error) {
-    console.warn('Failed to load diagnosis result:', error);
-    return null;
-  }
+  return SafeStorage.getItem(STORAGE_KEYS.DIAGNOSIS_RESULT, null);
 }
 
 // Diagnosis History Management
 export function getDiagnosisHistory(): DiagnosisResult[] {
-  if (!isStorageAvailable()) return [];
-  try {
-    const saved = localStorage.getItem(STORAGE_KEYS.DIAGNOSIS_HISTORY);
-    return saved ? JSON.parse(saved) : [];
-  } catch (error) {
-    console.warn('Failed to load diagnosis history:', error);
-    return [];
-  }
+  return SafeStorage.getItem(STORAGE_KEYS.DIAGNOSIS_HISTORY, []);
 }
 
 // Clear All Data

@@ -1,9 +1,9 @@
 // SubCheck Type Definitions - Central export point
 
-// Export all subscription-related types
+// Export all subscription-related types first (dependencies)
 export * from './subscription';
 
-// Export all diagnosis-related types  
+// Export all diagnosis-related types (depends on subscription types)
 export * from './diagnosis';
 
 // Legacy compatibility types (maintain existing interface)
@@ -16,23 +16,9 @@ export interface FrequencyBreakdown {
   unused: number;
 }
 
-export interface ComparisonItem {
-  amount: number;
-  description: string;
-  icon: string;
-  category: 'travel' | 'gadget' | 'food' | 'hobby';
-}
-
-export interface RecommendationItem {
-  subscriptionId: string;
-  action: 'cancel' | 'downgrade' | 'review';
-  reason: string;
-  potentialSaving: {
-    monthly: number;
-    yearly: number;
-  };
-  priority: 'high' | 'medium' | 'low';
-}
+// Moved to diagnosis.ts to avoid circular dependency
+// Re-export here for convenience
+export type { ComparisonItem, RecommendationItem } from './diagnosis';
 
 export interface DiagnosisState {
   currentStep: number;

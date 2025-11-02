@@ -90,7 +90,7 @@ export default function SelectPage() {
                         <div className="text-3xl">
                           {subscription.category === 'video' && '📺'}
                           {subscription.category === 'music' && '🎵'}
-                          {subscription.category === 'digital' && '💻'}
+                          {subscription.category === 'utility' && '💻'}
                         </div>
                         <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
                           selectedSubscriptions.includes(subscription.id)
@@ -105,24 +105,11 @@ export default function SelectPage() {
                       <h3 className="text-lg font-bold text-gray-900 mb-2">
                         {subscription.name}
                       </h3>
-                      <p className="text-sm text-gray-600 mb-3">
-                        {subscription.description}
-                      </p>
                       <div className="flex items-center justify-between">
                         <div className="text-lg font-bold text-blue-600">
-                          ¥{subscription.price.toLocaleString()}/月
+                          ¥{subscription.monthlyPrice.toLocaleString()}/月
                         </div>
-                        {subscription.marketShare && (
-                          <div className="text-xs text-gray-500">
-                            シェア {subscription.marketShare}
-                          </div>
-                        )}
                       </div>
-                      {subscription.priceRange.min !== subscription.priceRange.max && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          ¥{subscription.priceRange.min.toLocaleString()} - ¥{subscription.priceRange.max.toLocaleString()}
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 ))}

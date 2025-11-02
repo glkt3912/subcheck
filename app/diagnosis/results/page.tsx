@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { LoadingState } from '@/components/ui/LoadingSpinner';
 import WasteChart from '@/components/charts/WasteChart';
 import ResultsSummary from '@/components/shared/ResultsSummary';
 import SocialShareButtons from '@/components/shared/SocialShareButtons';
@@ -69,11 +70,8 @@ export default function ResultsPage() {
 
   if (isLoading || servicesLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">診断結果を計算中...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LoadingState text="診断結果を計算中..." size="xl" />
       </div>
     );
   }

@@ -1,3 +1,5 @@
+import { JapaneseTextUtils, JapaneseNumberUtils, JAPANESE_VALIDATION_MESSAGES } from '@/lib/utils/japaneseUtils';
+
 export interface ValidationResult {
   isValid: boolean;
   error?: string;
@@ -22,38 +24,22 @@ export class ValidationUtils {
   static readonly VALID_CATEGORIES = ['video', 'music', 'gaming', 'reading', 'utility', 'other'];
 
   /**
-   * Validate subscription service name
+   * Validate subscription service name using Japanese text utilities
    */
   static validateServiceName(name: string): ValidationResult {
     if (!name || typeof name !== 'string') {
       return {
         isValid: false,
-        error: 'サービス名を入力してください'
+        error: JAPANESE_VALIDATION_MESSAGES.REQUIRED
       };
     }
 
-    const trimmedName = name.trim();
-    
-    if (trimmedName.length < this.MIN_NAME_LENGTH) {
+    // Use Japanese text validation
+    const japaneseValidation = JapaneseTextUtils.validateServiceName(name);
+    if (!japaneseValidation.isValid) {
       return {
         isValid: false,
-        error: 'サービス名を入力してください'
-      };
-    }
-
-    if (trimmedName.length > this.MAX_NAME_LENGTH) {
-      return {
-        isValid: false,
-        error: `サービス名は${this.MAX_NAME_LENGTH}文字以内で入力してください`
-      };
-    }
-
-    // Check for invalid characters (basic validation)
-    const invalidCharsRegex = /[<>"/\\&]/;
-    if (invalidCharsRegex.test(trimmedName)) {
-      return {
-        isValid: false,
-        error: '無効な文字が含まれています'
+        error: japaneseValidation.error
       };
     }
 
@@ -61,43 +47,42 @@ export class ValidationUtils {
   }
 
   /**
-   * Validate monthly price
+   * Validate monthly price using Japanese number utilities
    */
   static validateMonthlyPrice(price: number | string): ValidationResult {
-    // Convert string to number if needed
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-
-    if (isNaN(numPrice)) {
+    // Handle Japanese number input
+    if (typeof price === 'string') {
+      const japaneseValidation = JapaneseNumberUtils.validatePriceInput(price);
       return {
-        isValid: false,
-        error: '有効な金額を入力してください'
+        isValid: japaneseValidation.isValid,
+        error: japaneseValidation.error
       };
-    }
+    } else {
+      const numPrice = price;
+      
+      if (isNaN(numPrice)) {
+        return {
+          isValid: false,
+          error: JAPANESE_VALIDATION_MESSAGES.PRICE_INVALID
+        };
+      }
 
-    if (numPrice < this.MIN_PRICE) {
-      return {
-        isValid: false,
-        error: `金額は${this.MIN_PRICE}円以上を入力してください`
-      };
-    }
+      if (numPrice < this.MIN_PRICE) {
+        return {
+          isValid: false,
+          error: JAPANESE_VALIDATION_MESSAGES.PRICE_TOO_LOW
+        };
+      }
 
-    if (numPrice > this.MAX_PRICE) {
-      return {
-        isValid: false,
-        error: `金額は${this.MAX_PRICE.toLocaleString()}円以下を入力してください`
-      };
-    }
+      if (numPrice > this.MAX_PRICE) {
+        return {
+          isValid: false,
+          error: JAPANESE_VALIDATION_MESSAGES.PRICE_TOO_HIGH
+        };
+      }
 
-    // Check for reasonable decimal places (max 2)
-    const decimalPlaces = (numPrice.toString().split('.')[1] || '').length;
-    if (decimalPlaces > 2) {
-      return {
-        isValid: false,
-        error: '小数点以下は2桁まで入力可能です'
-      };
+      return { isValid: true };
     }
-
-    return { isValid: true };
   }
 
   /**
@@ -149,25 +134,29 @@ export class ValidationUtils {
   }
 
   /**
-   * Sanitize service name (remove dangerous characters, trim whitespace)
+   * Sanitize service name using Japanese text utilities
    */
   static sanitizeServiceName(name: string): string {
     if (!name || typeof name !== 'string') {
       return '';
     }
 
-    return name
-      .trim()
-      .replace(/[<>"/\\&]/g, '') // Remove potentially dangerous characters
-      .substring(0, this.MAX_NAME_LENGTH); // Truncate if too long
+    // Use Japanese text normalization
+    const normalized = JapaneseTextUtils.normalize(name);
+    return normalized.substring(0, this.MAX_NAME_LENGTH);
   }
 
   /**
-   * Format and validate price input
+   * Format and validate price input using Japanese number utilities
    */
   static formatPrice(price: number | string): number {
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    if (typeof price === 'string') {
+      // Parse Japanese number input
+      const parsed = JapaneseNumberUtils.parseJapaneseNumber(price);
+      return Math.max(this.MIN_PRICE, Math.min(this.MAX_PRICE, parsed));
+    }
     
+    const numPrice = price;
     if (isNaN(numPrice)) {
       return 0;
     }
@@ -236,43 +225,23 @@ export class ValidationUtils {
   }
 
   /**
-   * Generate suggested category based on service name
+   * Generate suggested category using Japanese text utilities
    */
   static suggestCategory(serviceName: string): string {
-    const name = serviceName.toLowerCase();
-    
-    // Video streaming keywords
-    if (name.includes('netflix') || name.includes('youtube') || name.includes('amazon prime') || 
-        name.includes('hulu') || name.includes('disney') || name.includes('動画') || 
-        name.includes('映画') || name.includes('video')) {
-      return 'video';
-    }
-    
-    // Music streaming keywords
-    if (name.includes('spotify') || name.includes('apple music') || name.includes('youtube music') ||
-        name.includes('音楽') || name.includes('music')) {
-      return 'music';
-    }
-    
-    // Gaming keywords
-    if (name.includes('game') || name.includes('gaming') || name.includes('playstation') ||
-        name.includes('xbox') || name.includes('nintendo') || name.includes('steam') ||
-        name.includes('ゲーム')) {
-      return 'gaming';
-    }
-    
-    // Reading keywords
-    if (name.includes('kindle') || name.includes('book') || name.includes('magazine') ||
-        name.includes('本') || name.includes('雑誌') || name.includes('読書')) {
-      return 'reading';
-    }
-    
-    // Utility keywords
-    if (name.includes('cloud') || name.includes('storage') || name.includes('backup') ||
-        name.includes('vpn') || name.includes('クラウド') || name.includes('ストレージ')) {
-      return 'utility';
-    }
-    
-    return 'other';
+    return JapaneseTextUtils.suggestCategory(serviceName);
+  }
+
+  /**
+   * Format price for display using Japanese formatting
+   */
+  static formatPriceDisplay(price: number): string {
+    return JapaneseNumberUtils.formatPrice(price);
+  }
+
+  /**
+   * Format large numbers with Japanese units
+   */
+  static formatLargeNumber(num: number): string {
+    return JapaneseNumberUtils.formatLargeNumber(num);
   }
 }

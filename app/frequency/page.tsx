@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { getSubscriptionById } from '@/lib/subscriptions';
 import { getSelectedSubscriptions, saveUserSubscriptions } from '@/lib/storage';
-import type { FrequencyType, UserSubscription } from '@/types';
+import type { FrequencyType, UserSubscription, UsageFrequency } from '@/types';
 
 const FREQUENCY_OPTIONS: Array<{
   value: FrequencyType;
@@ -67,8 +67,9 @@ export default function FrequencyPage() {
   const saveAndProceed = () => {
     const userSubscriptions: UserSubscription[] = selectedSubscriptions.map(id => ({
       subscriptionId: id,
-      frequency: frequencies[id],
-      selectedAt: new Date()
+      usageFrequency: frequencies[id] as UsageFrequency,
+      isCustom: false,
+      dateAdded: new Date().toISOString()
     }));
     saveUserSubscriptions(userSubscriptions);
   };
@@ -136,14 +137,14 @@ export default function FrequencyPage() {
                       <div className="text-2xl mr-3">
                         {subscription.category === 'video' && '📺'}
                         {subscription.category === 'music' && '🎵'}
-                        {subscription.category === 'digital' && '💻'}
+                        {subscription.category === 'utility' && '💻'}
                       </div>
                       <div>
                         <h3 className="text-lg font-bold text-gray-900">
                           {subscription.name}
                         </h3>
                         <p className="text-sm text-gray-600">
-                          ¥{subscription.price.toLocaleString()}/月
+                          ¥{subscription.monthlyPrice.toLocaleString()}/月
                         </p>
                       </div>
                     </div>

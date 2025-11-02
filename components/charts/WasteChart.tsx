@@ -1,6 +1,7 @@
 'use client';
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { JapaneseNumberUtils } from '@/lib/utils/japaneseUtils';
 import { DiagnosisResult, UserSubscription, Subscription } from '@/types';
 
 interface WasteChartProps {
@@ -30,14 +31,14 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] 
       <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
         <p className="font-semibold text-gray-900">{data.name}</p>
         <p className="text-sm text-gray-600">
-          月額: ¥{data.value.toLocaleString()}
+          月額: {JapaneseNumberUtils.formatPrice(data.value)}
         </p>
         <p className="text-sm text-gray-600">
           使用頻度: {USAGE_LABELS[data.usage as keyof typeof USAGE_LABELS]}
         </p>
         {data.wasteAmount > 0 && (
           <p className="text-sm text-red-600">
-            年間無駄: ¥{data.wasteAmount.toLocaleString()}
+            年間無駄: {JapaneseNumberUtils.formatLargeNumber(data.wasteAmount)}
           </p>
         )}
       </div>
@@ -56,8 +57,8 @@ const CustomLegend = ({ payload }: { payload?: any[] }) => {
     if (!acc[usage]) {
       acc[usage] = {
         usage,
-        color: USAGE_COLORS[usage],
-        label: USAGE_LABELS[usage],
+        color: USAGE_COLORS[usage as keyof typeof USAGE_COLORS],
+        label: USAGE_LABELS[usage as keyof typeof USAGE_LABELS],
         services: [],
         totalValue: 0
       };
@@ -79,7 +80,7 @@ const CustomLegend = ({ payload }: { payload?: any[] }) => {
             {group.label}
           </span>
           <span className="text-sm text-gray-500">
-            ({group.services.length}サービス, ¥{group.totalValue.toLocaleString()}/月)
+            ({group.services.length}サービス, {JapaneseNumberUtils.formatPrice(group.totalValue)}/月)
           </span>
         </div>
       ))}
@@ -89,28 +90,30 @@ const CustomLegend = ({ payload }: { payload?: any[] }) => {
 
 export default function WasteChart({ diagnosisResult, subscriptionDetails }: WasteChartProps) {
   // Prepare data for pie chart
-  const chartData = diagnosisResult.subscriptions.map((userSub: UserSubscription) => {
-    const service = subscriptionDetails[userSub.subscriptionId];
-    if (!service) return null;
+  const chartData = diagnosisResult.subscriptions
+    .map((userSub: UserSubscription) => {
+      const service = subscriptionDetails[userSub.subscriptionId];
+      if (!service) return null;
 
-    const wasteMultiplier = {
-      daily: 0,
-      weekly: 0.25,
-      monthly: 0.6,
-      unused: 1.0
-    }[userSub.usageFrequency];
+      const wasteMultiplier = {
+        daily: 0,
+        weekly: 0.25,
+        monthly: 0.6,
+        unused: 1.0
+      }[userSub.usageFrequency];
 
-    const monthlyWaste = service.monthlyPrice * wasteMultiplier;
-    const yearlyWaste = monthlyWaste * 12;
+      const monthlyWaste = service.monthlyPrice * wasteMultiplier;
+      const yearlyWaste = monthlyWaste * 12;
 
-    return {
-      name: service.name,
-      value: service.monthlyPrice,
-      wasteAmount: yearlyWaste,
-      usage: userSub.usageFrequency,
-      color: USAGE_COLORS[userSub.usageFrequency]
-    };
-  }).filter(Boolean);
+      return {
+        name: service.name,
+        value: service.monthlyPrice,
+        wasteAmount: yearlyWaste,
+        usage: userSub.usageFrequency,
+        color: USAGE_COLORS[userSub.usageFrequency]
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   // Custom label function for pie chart
   const renderLabel = (entry: any) => {

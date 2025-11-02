@@ -5,6 +5,9 @@ import "./globals.css";
 const notoSansJP = Noto_Sans_JP({
   subsets: ["latin"],
   variable: "--font-noto-sans-jp",
+  display: 'swap',
+  preload: true,
+  fallback: ['system-ui', '-apple-system', 'sans-serif'],
 });
 
 export const metadata: Metadata = {
@@ -17,6 +20,20 @@ export const metadata: Metadata = {
     locale: "ja_JP",
     type: "website",
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: 'verification-token-here',
+  },
 };
 
 export default function RootLayout({
@@ -27,6 +44,9 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={`${notoSansJP.variable} font-sans antialiased bg-gray-50 text-gray-900`}>
+        <a href="#main-content" className="skip-link">
+          メインコンテンツにスキップ
+        </a>
         <div className="min-h-screen">
           {children}
         </div>
