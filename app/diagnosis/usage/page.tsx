@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { LoadingState } from '@/components/ui/LoadingSpinner';
 import UsageFrequencySelector from '@/components/forms/UsageFrequencySelector';
 import { useDiagnosisSession } from '@/lib/hooks/useDiagnosisSession';
 import { SubscriptionService } from '@/lib/services/SubscriptionService';
@@ -56,11 +57,8 @@ export default function UsagePage() {
 
   if (isLoading || servicesLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">データを読み込み中...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LoadingState text="データを読み込み中..." size="xl" />
       </div>
     );
   }

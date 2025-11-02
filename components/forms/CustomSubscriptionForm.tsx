@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ButtonLoading } from '@/components/ui/LoadingSpinner';
 import { ValidationUtils, CustomSubscriptionInput } from '@/lib/utils/validation';
+import { JapaneseNumberUtils } from '@/lib/utils/japaneseUtils';
 import { SubscriptionCategory } from '@/types';
 
 interface CustomSubscriptionFormProps {
@@ -94,7 +96,8 @@ export default function CustomSubscriptionForm({
   const handleBlur = (fieldName: keyof CustomSubscriptionInput) => {
     setTouched(prev => ({ ...prev, [fieldName]: true }));
     
-    const validation = validateField(fieldName, formData[fieldName] as string | number);
+    const fieldValue = formData[fieldName];
+    const validation = validateField(fieldName, fieldValue as string | number);
     if (!validation.isValid) {
       setErrors(prev => ({ ...prev, [fieldName]: validation.error }));
     }
@@ -109,7 +112,7 @@ export default function CustomSubscriptionForm({
     // Validate all fields
     const nameValidation = validateField('name', formData.name);
     const priceValidation = validateField('monthlyPrice', formData.monthlyPrice);
-    const categoryValidation = validateField('category', formData.category);
+    const categoryValidation = validateField('category', formData.category || '');
     
     const newErrors = {
       name: nameValidation.isValid ? undefined : nameValidation.error,
@@ -151,7 +154,7 @@ export default function CustomSubscriptionForm({
       </CardHeader>
       
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate role="form" aria-label="カスタムサブスクリプション追加フォーム">
           {/* Service Name */}
           <div>
             <label htmlFor="serviceName" className="block text-sm font-medium text-gray-700 mb-2">
@@ -164,6 +167,9 @@ export default function CustomSubscriptionForm({
               onChange={(e) => handleInputChange('name', e.target.value)}
               onBlur={() => handleBlur('name')}
               placeholder="例: 新しい動画サービス"
+              aria-describedby={`${errors.name && touched.name ? 'serviceName-error' : ''} serviceName-help`}
+              aria-invalid={errors.name && touched.name ? 'true' : 'false'}
+              aria-required="true"
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.name && touched.name 
                   ? 'border-red-300 bg-red-50' 
@@ -173,9 +179,9 @@ export default function CustomSubscriptionForm({
               disabled={isLoading}
             />
             {errors.name && touched.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+              <p id="serviceName-error" className="mt-1 text-sm text-red-600" role="alert">{errors.name}</p>
             )}
-            <p className="mt-1 text-xs text-gray-500">
+            <p id="serviceName-help" className="mt-1 text-xs text-gray-500">
               {formData.name.length}/{ValidationUtils.MAX_NAME_LENGTH}文字
             </p>
           </div>
@@ -189,14 +195,19 @@ export default function CustomSubscriptionForm({
               <span className="absolute left-3 top-2 text-gray-500">¥</span>
               <input
                 id="monthlyPrice"
-                type="number"
-                min={ValidationUtils.MIN_PRICE}
-                max={ValidationUtils.MAX_PRICE}
-                step="1"
+                type="text"
+                inputMode="numeric"
                 value={formData.monthlyPrice || ''}
-                onChange={(e) => handleInputChange('monthlyPrice', e.target.value)}
+                onChange={(e) => {
+                  // Allow Japanese number input (full-width numbers, commas, yen symbol)
+                  const normalizedValue = JapaneseNumberUtils.parseJapaneseNumber(e.target.value);
+                  handleInputChange('monthlyPrice', normalizedValue);
+                }}
                 onBlur={() => handleBlur('monthlyPrice')}
-                placeholder="1,000"
+                placeholder="1,000 または １，０００"
+                aria-describedby={`${errors.monthlyPrice && touched.monthlyPrice ? 'monthlyPrice-error' : ''} monthlyPrice-help`}
+                aria-invalid={errors.monthlyPrice && touched.monthlyPrice ? 'true' : 'false'}
+                aria-required="true"
                 className={`w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.monthlyPrice && touched.monthlyPrice 
                     ? 'border-red-300 bg-red-50' 
@@ -206,10 +217,10 @@ export default function CustomSubscriptionForm({
               />
             </div>
             {errors.monthlyPrice && touched.monthlyPrice && (
-              <p className="mt-1 text-sm text-red-600">{errors.monthlyPrice}</p>
+              <p id="monthlyPrice-error" className="mt-1 text-sm text-red-600" role="alert">{errors.monthlyPrice}</p>
             )}
-            <p className="mt-1 text-xs text-gray-500">
-              {ValidationUtils.MIN_PRICE}円〜{ValidationUtils.MAX_PRICE.toLocaleString()}円で入力してください
+            <p id="monthlyPrice-help" className="mt-1 text-xs text-gray-500">
+              {JapaneseNumberUtils.formatPrice(ValidationUtils.MIN_PRICE)}〜{JapaneseNumberUtils.formatPrice(ValidationUtils.MAX_PRICE)}で入力してください
             </p>
           </div>
 
@@ -223,6 +234,9 @@ export default function CustomSubscriptionForm({
               value={formData.category}
               onChange={(e) => handleInputChange('category', e.target.value)}
               onBlur={() => handleBlur('category')}
+              aria-describedby={errors.category && touched.category ? 'category-error' : undefined}
+              aria-invalid={errors.category && touched.category ? 'true' : 'false'}
+              aria-required="true"
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.category && touched.category 
                   ? 'border-red-300 bg-red-50' 
@@ -237,22 +251,22 @@ export default function CustomSubscriptionForm({
               ))}
             </select>
             {errors.category && touched.category && (
-              <p className="mt-1 text-sm text-red-600">{errors.category}</p>
+              <p id="category-error" className="mt-1 text-sm text-red-600" role="alert">{errors.category}</p>
             )}
           </div>
 
           {/* Preview */}
           {formData.name && formData.monthlyPrice > 0 && (
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200" role="region" aria-label="サービスプレビュー">
               <h4 className="text-sm font-medium text-blue-900 mb-2">プレビュー</h4>
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg flex items-center justify-center text-white font-bold">
+                <div className="w-10 h-10 bg-linear-to-br from-gray-400 to-gray-600 rounded-lg flex items-center justify-center text-white font-bold" role="img" aria-label={`${formData.name}のアイコン`}>
                   {formData.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">{formData.name}</p>
                   <p className="text-sm text-gray-600">
-                    月額 ¥{formData.monthlyPrice ? formData.monthlyPrice.toLocaleString() : 0}
+                    月額 {formData.monthlyPrice ? JapaneseNumberUtils.formatPrice(formData.monthlyPrice) : JapaneseNumberUtils.formatPrice(0)}
                   </p>
                 </div>
               </div>
@@ -275,7 +289,7 @@ export default function CustomSubscriptionForm({
               disabled={!isFormValid() || isLoading}
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
-              {isLoading ? '追加中...' : '追加'}
+              {isLoading ? <ButtonLoading text="追加中..." /> : '追加'}
             </Button>
           </div>
         </form>

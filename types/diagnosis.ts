@@ -10,7 +10,8 @@ export interface WasteBreakdown {
   wasteAmount: number;           // Yearly waste for this service
 }
 
-export interface DiagnosisResult {
+// Legacy interface for backward compatibility
+export interface DiagnosisResultLegacy {
   id: string;                    // Unique result ID
   userSubscriptions: UserSubscription[]; // Subscriptions analyzed
   totalMonthlySpend: number;     // Total monthly spending in JPY
@@ -21,6 +22,46 @@ export interface DiagnosisResult {
   equivalentItems: string[];     // What waste amount could buy instead
   createdAt: string;             // ISO date string of calculation
   completionTime: number;        // Time taken to complete diagnosis (seconds)
+}
+
+// Actual DiagnosisResult structure from CalculationService
+export interface DiagnosisResult {
+  subscriptions: UserSubscription[];     // Subscriptions analyzed
+  totals: {
+    monthly: number;                     // Total monthly spending
+    yearly: number;                      // Total yearly spending  
+    unusedYearly: number;               // Yearly waste amount
+  };
+  wasteRate: number;                    // Waste percentage (0-100)
+  frequencyBreakdown: {
+    daily: number;
+    weekly: number;
+    monthly: number;
+    unused: number;
+  };
+  comparisonItems: ComparisonItem[];    // What waste amount could buy
+  recommendations: RecommendationItem[]; // Improvement suggestions
+  createdAt: Date;                      // Date of calculation
+  shareId: string;                      // Unique share identifier
+}
+
+// Import from main index to avoid circular dependency
+export interface ComparisonItem {
+  amount: number;
+  description: string;
+  icon: string;
+  category: 'travel' | 'gadget' | 'food' | 'hobby';
+}
+
+export interface RecommendationItem {
+  subscriptionId: string;
+  action: 'cancel' | 'downgrade' | 'review';
+  reason: string;
+  potentialSaving: {
+    monthly: number;
+    yearly: number;
+  };
+  priority: 'high' | 'medium' | 'low';
 }
 
 export enum DiagnosisStep {

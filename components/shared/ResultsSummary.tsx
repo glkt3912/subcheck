@@ -1,7 +1,9 @@
 'use client';
 
+import { memo, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { JapaneseNumberUtils } from '@/lib/utils/japaneseUtils';
 import { DiagnosisResult, UserSubscription, Subscription } from '@/types';
 
 interface ResultsSummaryProps {
@@ -13,7 +15,7 @@ interface ResultsSummaryProps {
   showActions?: boolean;
 }
 
-export default function ResultsSummary({
+function ResultsSummary({
   diagnosisResult,
   userSubscriptions,
   subscriptionDetails,
@@ -21,33 +23,44 @@ export default function ResultsSummary({
   onShare,
   showActions = true
 }: ResultsSummaryProps) {
-  const getWasteRateColor = (wasteRate: number) => {
+  // Memoize utility functions to prevent recreation on every render
+  const getWasteRateColor = useMemo(() => (wasteRate: number) => {
     if (wasteRate < 20) return 'text-green-600';
     if (wasteRate < 50) return 'text-yellow-600';
     return 'text-red-600';
-  };
+  }, []);
 
-  const getWasteRateBgColor = (wasteRate: number) => {
+  const getWasteRateBgColor = useMemo(() => (wasteRate: number) => {
     if (wasteRate < 20) return 'from-green-50 to-emerald-50 border-green-200';
     if (wasteRate < 50) return 'from-yellow-50 to-amber-50 border-yellow-200';
     return 'from-red-50 to-pink-50 border-red-200';
-  };
+  }, []);
 
-  const getWasteRateMessage = (wasteRate: number) => {
+  const getWasteRateMessage = useMemo(() => (wasteRate: number) => {
     if (wasteRate < 20) return 'とても効率的にサブスクを活用できています！👏';
     if (wasteRate < 50) return 'まずまずですが、まだ改善の余地がありそうです。📊';
     return 'かなりの無駄が発生しています。見直しをおすすめします！⚠️';
-  };
+  }, []);
 
-  const getUsageFrequencyLabel = (frequency: string) => {
+  const getUsageFrequencyLabel = useMemo(() => {
     const labels = {
       daily: '毎日使用',
       weekly: '週1-2回使用',
       monthly: '月1-2回使用',
       unused: '未使用'
     };
-    return labels[frequency as keyof typeof labels] || frequency;
-  };
+    return (frequency: string) => labels[frequency as keyof typeof labels] || frequency;
+  }, []);
+
+  // Memoize frequency breakdown calculation
+  const frequencyBreakdown = useMemo(() => {
+    return {
+      daily: userSubscriptions.filter(sub => sub.usageFrequency === 'daily').length,
+      weekly: userSubscriptions.filter(sub => sub.usageFrequency === 'weekly').length,
+      monthly: userSubscriptions.filter(sub => sub.usageFrequency === 'monthly').length,
+      unused: userSubscriptions.filter(sub => sub.usageFrequency === 'unused').length,
+    };
+  }, [userSubscriptions]);
 
   return (
     <div className="space-y-8">
@@ -62,7 +75,7 @@ export default function ResultsSummary({
           </div>
           <div className="mb-6">
             <div className="text-3xl font-bold text-red-600 mb-2">
-              ¥{diagnosisResult.totals.unusedYearly.toLocaleString()}
+              {JapaneseNumberUtils.formatLargeNumber(diagnosisResult.totals.unusedYearly)}
             </div>
             <div className="text-lg text-gray-700">年間浪費額</div>
           </div>
@@ -77,7 +90,7 @@ export default function ResultsSummary({
         <Card>
           <CardContent className="p-6 text-center">
             <div className="text-2xl font-bold text-blue-600 mb-2">
-              ¥{diagnosisResult.totals.monthly.toLocaleString()}
+              {JapaneseNumberUtils.formatPrice(diagnosisResult.totals.monthly)}
             </div>
             <div className="text-gray-600">月額合計</div>
           </CardContent>
@@ -85,7 +98,7 @@ export default function ResultsSummary({
         <Card>
           <CardContent className="p-6 text-center">
             <div className="text-2xl font-bold text-gray-800 mb-2">
-              ¥{diagnosisResult.totals.yearly.toLocaleString()}
+              {JapaneseNumberUtils.formatLargeNumber(diagnosisResult.totals.yearly)}
             </div>
             <div className="text-gray-600">年額合計</div>
           </CardContent>
@@ -93,7 +106,7 @@ export default function ResultsSummary({
         <Card>
           <CardContent className="p-6 text-center">
             <div className="text-2xl font-bold text-red-600 mb-2">
-              ¥{diagnosisResult.totals.unusedYearly.toLocaleString()}
+              {JapaneseNumberUtils.formatLargeNumber(diagnosisResult.totals.unusedYearly)}
             </div>
             <div className="text-gray-600">年間無駄額</div>
           </CardContent>
@@ -136,11 +149,11 @@ export default function ResultsSummary({
                   </div>
                   <div className="text-right">
                     <div className="font-semibold text-gray-900">
-                      ¥{service.monthlyPrice.toLocaleString()}/月
+                      {JapaneseNumberUtils.formatPrice(service.monthlyPrice)}/月
                     </div>
                     {yearlyWaste > 0 && (
                       <div className="text-sm text-red-600">
-                        年間無駄: ¥{yearlyWaste.toLocaleString()}
+                        年間無駄: {JapaneseNumberUtils.formatLargeNumber(yearlyWaste)}
                       </div>
                     )}
                     {yearlyWaste === 0 && (
@@ -164,7 +177,7 @@ export default function ResultsSummary({
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 mb-4">
-              年間 ¥{diagnosisResult.totals.unusedYearly.toLocaleString()} があれば、こんなものが買えます：
+              年間 {JapaneseNumberUtils.formatLargeNumber(diagnosisResult.totals.unusedYearly)} があれば、こんなものが買えます：
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {diagnosisResult.comparisonItems.map((item, index) => (
@@ -172,7 +185,7 @@ export default function ResultsSummary({
                   <span className="text-2xl">{item.icon}</span>
                   <div>
                     <div className="font-medium text-gray-900">{item.description}</div>
-                    <div className="text-sm text-gray-600">¥{item.amount.toLocaleString()}</div>
+                    <div className="text-sm text-gray-600">{JapaneseNumberUtils.formatPrice(item.amount)}</div>
                   </div>
                 </div>
               ))}
@@ -212,7 +225,7 @@ export default function ResultsSummary({
                     </div>
                     <p className="text-gray-700 mb-2">{rec.reason}</p>
                     <div className="text-sm text-gray-600">
-                      節約可能額: 年間 ¥{rec.potentialSaving.yearly.toLocaleString()}
+                      節約可能額: 年間 {JapaneseNumberUtils.formatLargeNumber(rec.potentialSaving.yearly)}
                     </div>
                   </div>
                 );
@@ -228,25 +241,25 @@ export default function ResultsSummary({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
               <div className="text-lg font-bold text-green-600">
-                {userSubscriptions.filter(sub => sub.usageFrequency === 'daily').length}
+                {frequencyBreakdown.daily}
               </div>
               <div className="text-sm text-gray-600">毎日使用</div>
             </div>
             <div>
               <div className="text-lg font-bold text-yellow-600">
-                {userSubscriptions.filter(sub => sub.usageFrequency === 'weekly').length}
+                {frequencyBreakdown.weekly}
               </div>
               <div className="text-sm text-gray-600">週1-2回</div>
             </div>
             <div>
               <div className="text-lg font-bold text-orange-600">
-                {userSubscriptions.filter(sub => sub.usageFrequency === 'monthly').length}
+                {frequencyBreakdown.monthly}
               </div>
               <div className="text-sm text-gray-600">月1-2回</div>
             </div>
             <div>
               <div className="text-lg font-bold text-red-600">
-                {userSubscriptions.filter(sub => sub.usageFrequency === 'unused').length}
+                {frequencyBreakdown.unused}
               </div>
               <div className="text-sm text-gray-600">未使用</div>
             </div>
@@ -280,3 +293,6 @@ export default function ResultsSummary({
     </div>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(ResultsSummary);
