@@ -35,13 +35,16 @@ export default function ResultPage() {
   const [userSubscriptions, setUserSubscriptions] = useState<UserSubscription[]>([]);
 
   useEffect(() => {
-    const subs = getUserSubscriptions();
-    if (subs.length > 0) {
-      setUserSubscriptions(subs);
-      const diagnosis = calculateDiagnosis(subs);
-      setResult(diagnosis);
-      saveDiagnosisResult(diagnosis);
-    }
+    const loadDataAndCalculate = () => {
+      const subs = getUserSubscriptions();
+      if (subs.length > 0) {
+        setUserSubscriptions(subs);
+        const diagnosis = calculateDiagnosis(subs);
+        setResult(diagnosis);
+        saveDiagnosisResult(diagnosis);
+      }
+    };
+    loadDataAndCalculate();
   }, []);
 
   if (!result || userSubscriptions.length === 0) {
@@ -60,7 +63,7 @@ export default function ResultPage() {
   }
 
   const chartData = Object.entries(result.frequencyBreakdown)
-    .filter(([_, value]) => value > 0)
+    .filter(([, value]) => value > 0)
     .map(([key, value]) => ({
       name: FREQUENCY_LABELS[key as keyof typeof FREQUENCY_LABELS],
       value: value,

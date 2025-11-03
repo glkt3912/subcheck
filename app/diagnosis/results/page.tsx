@@ -44,6 +44,7 @@ export default function ResultsPage() {
         setSubscriptionDetails(details);
 
         // Calculate diagnosis if we have subscriptions but no result yet
+        // Only calculate if we have the expected number of subscriptions
         if (userSubscriptions.length > 0 && !diagnosisResult) {
           await calculateResults();
         }

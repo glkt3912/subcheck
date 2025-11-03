@@ -51,8 +51,11 @@ export default function FrequencyPage() {
   const [frequencies, setFrequencies] = useState<Record<string, FrequencyType>>({});
 
   useEffect(() => {
-    const saved = getSelectedSubscriptions();
-    setSelectedSubscriptions(saved);
+    const loadSavedData = () => {
+      const saved = getSelectedSubscriptions();
+      setSelectedSubscriptions(saved);
+    };
+    loadSavedData();
   }, []);
 
   const setFrequency = (subscriptionId: string, frequency: FrequencyType) => {

@@ -1,6 +1,6 @@
 // Diagnosis-related type definitions
 
-import { UserSubscription } from './subscription';
+import { UserSubscription, UsageFrequency } from './subscription';
 
 export interface WasteBreakdown {
   subscriptionId: string;        // Reference to subscription
@@ -80,4 +80,4 @@ export interface DiagnosisSession {
 }
 
 // Re-export UsageFrequency from subscription types for convenience
-export { UsageFrequency } from './subscription';
+export { UsageFrequency };

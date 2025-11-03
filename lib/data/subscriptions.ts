@@ -46,6 +46,22 @@ export const SUBSCRIPTION_DATA: Subscription[] = [
     isPopular: false
   },
   {
+    id: 'u-next',
+    name: 'U-NEXT',
+    category: SubscriptionCategory.VIDEO,
+    monthlyPrice: 2189,
+    logoUrl: '/logos/u-next.svg',
+    isPopular: true
+  },
+  {
+    id: 'disney-plus',
+    name: 'Disney+',
+    category: SubscriptionCategory.VIDEO,
+    monthlyPrice: 1320,
+    logoUrl: '/logos/disney-plus.svg',
+    isPopular: true
+  },
+  {
     id: 'adobe-creative-cloud',
     name: 'Adobe Creative Cloud',
     category: SubscriptionCategory.UTILITY,
