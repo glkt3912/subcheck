@@ -1,18 +1,21 @@
 'use client';
 
 import { memo } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, PieLabelRenderProps } from 'recharts';
 
 interface ChartData {
   name: string;
   value: number;
   color: string;
-  [key: string]: any;
+  wasteAmount?: number;
+  usage?: string;
+  [key: string]: string | number | undefined;
 }
 
 interface DiagnosisChartProps {
   data: ChartData[];
 }
+
 
 const DiagnosisChart = memo(({ data }: DiagnosisChartProps) => {
   if (data.length === 0) {
@@ -32,7 +35,7 @@ const DiagnosisChart = memo(({ data }: DiagnosisChartProps) => {
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ name, value }: any) => `${name}: ¥${(value as number).toLocaleString()}`}
+            label={(props: PieLabelRenderProps) => `${props.name || ''}: ¥${props.value?.toLocaleString() || '0'}`}
             outerRadius={80}
             fill="#8884d8"
             dataKey="value"
@@ -41,7 +44,7 @@ const DiagnosisChart = memo(({ data }: DiagnosisChartProps) => {
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip formatter={(value) => [`¥${value.toLocaleString()}`, '月額']} />
+          <Tooltip formatter={(value: number) => [`¥${value.toLocaleString()}`, '月額']} />
           <Legend />
         </PieChart>
       </ResponsiveContainer>

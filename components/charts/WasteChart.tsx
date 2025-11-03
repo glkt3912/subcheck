@@ -1,6 +1,6 @@
 'use client';
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, PieLabelRenderProps } from 'recharts';
 import { JapaneseNumberUtils } from '@/lib/utils/japaneseUtils';
 import { DiagnosisResult, UserSubscription, Subscription } from '@/types';
 
@@ -24,7 +24,16 @@ const USAGE_LABELS = {
 };
 
 // Custom tooltip component
-const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
+interface TooltipPayload {
+  payload: {
+    name: string;
+    value: number;
+    usage: string;
+    wasteAmount: number;
+  };
+}
+
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
@@ -48,11 +57,24 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] 
 };
 
 // Custom legend component
-const CustomLegend = ({ payload }: { payload?: any[] }) => {
+interface LegendPayload {
+  payload: {
+    usage: string;
+    value: number;
+  };
+}
+
+const CustomLegend = ({ payload }: { payload?: LegendPayload[] }) => {
   if (!payload || !Array.isArray(payload)) return null;
 
   // Group by usage frequency
-  const groupedData = payload.reduce((acc: any, item: any) => {
+  const groupedData = payload.reduce((acc: Record<string, {
+    usage: string;
+    color: string;
+    label: string;
+    services: { name: string; value: number; usage: string }[];
+    totalValue: number;
+  }>, item: LegendPayload) => {
     if (!item || !item.payload) return acc;
     
     const usage = item.payload.usage;
@@ -67,14 +89,18 @@ const CustomLegend = ({ payload }: { payload?: any[] }) => {
         totalValue: 0
       };
     }
-    acc[usage].services.push(item.payload);
+    acc[usage].services.push({
+      name: (item.payload as { name?: string; value: number; usage: string }).name || 'Unknown',
+      value: item.payload.value || 0,
+      usage: item.payload.usage || usage
+    });
     acc[usage].totalValue += item.payload.value || 0;
     return acc;
   }, {});
 
   return (
     <div className="mt-4 space-y-2">
-      {Object.values(groupedData).map((group: any) => (
+      {Object.values(groupedData).map((group) => (
         <div key={group.usage} className="flex items-center space-x-2">
           <div 
             className="w-4 h-4 rounded"
@@ -139,8 +165,9 @@ export default function WasteChart({ diagnosisResult, subscriptionDetails }: Was
   }
 
   // Custom label function for pie chart
-  const renderLabel = (entry: any) => {
-    const percent = ((entry.value / diagnosisResult.totals.monthly) * 100).toFixed(1);
+  const renderLabel = (props: PieLabelRenderProps) => {
+    const value = Number(props.value) || 0;
+    const percent = ((value / diagnosisResult.totals.monthly) * 100).toFixed(1);
     return `${percent}%`;
   };
 
@@ -175,7 +202,7 @@ export default function WasteChart({ diagnosisResult, subscriptionDetails }: Was
       </div>
 
       {/* Legend */}
-      <CustomLegend payload={chartData} />
+      <CustomLegend payload={chartData.map(item => ({ payload: item }))} />
 
       {/* Summary Stats */}
       <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">

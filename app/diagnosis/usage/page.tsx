@@ -23,7 +23,6 @@ export default function UsagePage() {
   
   const [availableServices, setAvailableServices] = useState<Subscription[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
-  const subscriptionService = new SubscriptionService();
 
   useEffect(() => {
     // Redirect if no services selected
@@ -34,6 +33,7 @@ export default function UsagePage() {
 
     const loadServices = async () => {
       try {
+        const subscriptionService = new SubscriptionService();
         const services = await subscriptionService.getAllSubscriptions();
         setAvailableServices(services);
       } catch (error) {
