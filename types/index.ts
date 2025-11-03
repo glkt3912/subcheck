@@ -6,6 +6,10 @@ export * from './subscription';
 // Export all diagnosis-related types (depends on subscription types)
 export * from './diagnosis';
 
+// Explicit imports for internal use
+import type { UserSubscription } from './subscription';
+import type { DiagnosisResult } from './diagnosis';
+
 // Legacy compatibility types (maintain existing interface)
 export type FrequencyType = 'daily' | 'weekly' | 'monthly' | 'unused';
 

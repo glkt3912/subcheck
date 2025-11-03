@@ -295,9 +295,11 @@ export const JAPANESE_VALIDATION_MESSAGES = {
   PRICE_INVALID: '有効な金額を入力してください'
 };
 
-export default {
+const JapaneseUtilities = {
   JapaneseTextUtils,
   JapaneseNumberUtils,
   JAPANESE_PATTERNS,
   JAPANESE_VALIDATION_MESSAGES
 };
+
+export default JapaneseUtilities;

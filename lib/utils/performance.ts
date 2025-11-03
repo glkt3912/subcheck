@@ -159,16 +159,7 @@ export const createLazyComponent = <T extends React.ComponentType<any>>(
   importFunc: () => Promise<{ default: T }>,
   fallback?: React.ComponentType
 ) => {
-  const LazyComponent = React.lazy(importFunc);
-  
-  return React.forwardRef<any, React.ComponentProps<T>>((props, ref) => {
-    const Suspense = React.Suspense;
-    return (
-      <Suspense fallback={fallback ? React.createElement(fallback) : null}>
-        <LazyComponent {...props} ref={ref} />
-      </Suspense>
-    );
-  });
+  return React.lazy(importFunc);
 };
 
 /**

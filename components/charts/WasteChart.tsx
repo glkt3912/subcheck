@@ -49,22 +49,26 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] 
 
 // Custom legend component
 const CustomLegend = ({ payload }: { payload?: any[] }) => {
-  if (!payload) return null;
+  if (!payload || !Array.isArray(payload)) return null;
 
   // Group by usage frequency
   const groupedData = payload.reduce((acc: any, item: any) => {
+    if (!item || !item.payload) return acc;
+    
     const usage = item.payload.usage;
+    if (!usage) return acc; // Skip items without usage property
+    
     if (!acc[usage]) {
       acc[usage] = {
         usage,
-        color: USAGE_COLORS[usage as keyof typeof USAGE_COLORS],
-        label: USAGE_LABELS[usage as keyof typeof USAGE_LABELS],
+        color: USAGE_COLORS[usage as keyof typeof USAGE_COLORS] || '#6B7280',
+        label: USAGE_LABELS[usage as keyof typeof USAGE_LABELS] || usage,
         services: [],
         totalValue: 0
       };
     }
     acc[usage].services.push(item.payload);
-    acc[usage].totalValue += item.payload.value;
+    acc[usage].totalValue += item.payload.value || 0;
     return acc;
   }, {});
 
@@ -89,8 +93,18 @@ const CustomLegend = ({ payload }: { payload?: any[] }) => {
 };
 
 export default function WasteChart({ diagnosisResult, subscriptionDetails }: WasteChartProps) {
+  // Validate inputs
+  if (!diagnosisResult || !diagnosisResult.subscriptions || !subscriptionDetails) {
+    return (
+      <div className="w-full h-80 flex items-center justify-center text-gray-500">
+        <p>診断データが見つかりません</p>
+      </div>
+    );
+  }
+
   // Prepare data for pie chart
   const chartData = diagnosisResult.subscriptions
+    .filter((userSub: UserSubscription) => userSub && userSub.subscriptionId && userSub.usageFrequency)
     .map((userSub: UserSubscription) => {
       const service = subscriptionDetails[userSub.subscriptionId];
       if (!service) return null;
@@ -100,20 +114,29 @@ export default function WasteChart({ diagnosisResult, subscriptionDetails }: Was
         weekly: 0.25,
         monthly: 0.6,
         unused: 1.0
-      }[userSub.usageFrequency];
+      }[userSub.usageFrequency] || 0;
 
-      const monthlyWaste = service.monthlyPrice * wasteMultiplier;
+      const monthlyWaste = (service.monthlyPrice || 0) * wasteMultiplier;
       const yearlyWaste = monthlyWaste * 12;
 
       return {
-        name: service.name,
-        value: service.monthlyPrice,
+        name: service.name || 'Unknown Service',
+        value: service.monthlyPrice || 0,
         wasteAmount: yearlyWaste,
         usage: userSub.usageFrequency,
-        color: USAGE_COLORS[userSub.usageFrequency]
+        color: USAGE_COLORS[userSub.usageFrequency] || USAGE_COLORS.unused
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
+
+  // Handle empty chart data
+  if (chartData.length === 0) {
+    return (
+      <div className="w-full h-80 flex items-center justify-center text-gray-500">
+        <p>表示するデータがありません</p>
+      </div>
+    );
+  }
 
   // Custom label function for pie chart
   const renderLabel = (entry: any) => {

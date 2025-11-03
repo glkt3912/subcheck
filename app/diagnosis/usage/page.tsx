@@ -50,9 +50,17 @@ export default function UsagePage() {
   const handleNext = async () => {
     if (!hasAllFrequencies) return;
 
-    // Create user subscriptions and navigate
-    await createUserSubscriptions();
-    router.push('/diagnosis/results');
+    try {
+      // Create user subscriptions first
+      await createUserSubscriptions();
+      
+      // Wait a bit for state to update, then navigate
+      setTimeout(() => {
+        router.push('/diagnosis/results');
+      }, 100);
+    } catch (error) {
+      console.error('Failed to create user subscriptions:', error);
+    }
   };
 
   if (isLoading || servicesLoading) {
