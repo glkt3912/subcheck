@@ -175,48 +175,4 @@ export function getStorageInfo(): {
   };
 }
 
-// StorageService class for compatibility with existing code
-export class StorageService {
-  saveSelectedSubscriptions = saveSelectedSubscriptions;
-  getSelectedSubscriptions = getSelectedSubscriptions;
-  saveUserSubscriptions = saveUserSubscriptions;
-  getUserSubscriptions = getUserSubscriptions;
-  saveDiagnosisResult = saveDiagnosisResult;
-  getDiagnosisResult = getDiagnosisResult;
-  getDiagnosisHistory = getDiagnosisHistory;
-  clearAllData = clearAllData;
-  exportData = exportData;
-  hasExistingData = hasExistingData;
-  getStorageInfo = getStorageInfo;
-
-  // Generic methods for useDiagnosisSession compatibility
-  async getItem<T>(key: string): Promise<T | null> {
-    if (!isStorageAvailable()) return null;
-    try {
-      const stored = localStorage.getItem(key);
-      return stored ? JSON.parse(stored) : null;
-    } catch (error) {
-      console.warn(`Failed to load ${key}:`, error);
-      return null;
-    }
-  }
-
-  async setItem<T>(key: string, value: T): Promise<void> {
-    if (!isStorageAvailable()) return;
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-      console.warn(`Failed to save ${key}:`, error);
-      throw error;
-    }
-  }
-
-  async removeItem(key: string): Promise<void> {
-    if (!isStorageAvailable()) return;
-    try {
-      localStorage.removeItem(key);
-    } catch (error) {
-      console.warn(`Failed to remove ${key}:`, error);
-    }
-  }
-}
+// All storage operations are now function-based for simplicity and consistency
