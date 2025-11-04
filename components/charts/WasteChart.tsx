@@ -24,27 +24,21 @@ const USAGE_LABELS = {
 };
 
 // Custom tooltip component
-interface TooltipPayload {
-  payload: {
-    name: string;
-    value: number;
-    usage: string;
-    wasteAmount: number;
-  };
-}
 
-const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) => {
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
       <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
         <p className="font-semibold text-gray-900">{data.name}</p>
         <p className="text-sm text-gray-600">
-          月額: {JapaneseNumberUtils.formatPrice(data.value)}
+          {data.serviceCount}サービス: {JapaneseNumberUtils.formatPrice(data.value)}/月
         </p>
-        <p className="text-sm text-gray-600">
-          使用頻度: {USAGE_LABELS[data.usage as keyof typeof USAGE_LABELS]}
-        </p>
+        {data.services && (
+          <p className="text-xs text-gray-500">
+            {data.services.join(', ')}
+          </p>
+        )}
         {data.wasteAmount > 0 && (
           <p className="text-sm text-red-600">
             年間無駄: {JapaneseNumberUtils.formatLargeNumber(data.wasteAmount)}
@@ -128,32 +122,43 @@ export default function WasteChart({ diagnosisResult, subscriptionDetails }: Was
     );
   }
 
-  // Prepare data for pie chart
-  const chartData = diagnosisResult.subscriptions
+  // Prepare data for pie chart - Group by usage frequency
+  const frequencyGroups = diagnosisResult.subscriptions
     .filter((userSub: UserSubscription) => userSub && userSub.subscriptionId && userSub.usageFrequency)
-    .map((userSub: UserSubscription) => {
+    .reduce((groups: Record<string, { totalPrice: number; services: string[]; wasteAmount: number }>, userSub: UserSubscription) => {
       const service = subscriptionDetails[userSub.subscriptionId];
-      if (!service) return null;
+      if (!service) return groups;
+
+      const frequency = userSub.usageFrequency;
+      if (!groups[frequency]) {
+        groups[frequency] = { totalPrice: 0, services: [], wasteAmount: 0 };
+      }
 
       const wasteMultiplier = {
         daily: 0,
         weekly: 0.25,
         monthly: 0.6,
         unused: 1.0
-      }[userSub.usageFrequency] || 0;
+      }[frequency] || 0;
 
       const monthlyWaste = (service.monthlyPrice || 0) * wasteMultiplier;
-      const yearlyWaste = monthlyWaste * 12;
 
-      return {
-        name: service.name || 'Unknown Service',
-        value: service.monthlyPrice || 0,
-        wasteAmount: yearlyWaste,
-        usage: userSub.usageFrequency,
-        color: USAGE_COLORS[userSub.usageFrequency] || USAGE_COLORS.unused
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
+      groups[frequency].totalPrice += service.monthlyPrice || 0;
+      groups[frequency].services.push(service.name || 'Unknown');
+      groups[frequency].wasteAmount += monthlyWaste * 12;
+
+      return groups;
+    }, {});
+
+  const chartData = Object.entries(frequencyGroups).map(([frequency, data]) => ({
+    name: USAGE_LABELS[frequency as keyof typeof USAGE_LABELS] || frequency,
+    value: data.totalPrice,
+    wasteAmount: data.wasteAmount,
+    usage: frequency,
+    serviceCount: data.services.length,
+    services: data.services,
+    color: USAGE_COLORS[frequency as keyof typeof USAGE_COLORS] || USAGE_COLORS.unused
+  }));
 
   // Handle empty chart data
   if (chartData.length === 0) {
@@ -173,6 +178,12 @@ export default function WasteChart({ diagnosisResult, subscriptionDetails }: Was
 
   return (
     <div className="w-full">
+      {/* Chart Title */}
+      <div className="text-center mb-4">
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">使用頻度別月額割合</h3>
+        <p className="text-sm text-gray-600">円グラフは月額料金に占める各使用頻度の割合を表示しています</p>
+      </div>
+      
       {/* Chart */}
       <div className="h-80 mb-4">
         <ResponsiveContainer width="100%" height="100%">
