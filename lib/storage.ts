@@ -12,6 +12,5 @@ export {
   clearAllData,
   exportData,
   hasExistingData,
-  getStorageInfo,
-  StorageService
+  getStorageInfo
 } from './storage/StorageService';
