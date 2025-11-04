@@ -10,6 +10,8 @@ import ResultsSummary from '@/components/shared/ResultsSummary';
 import SocialShareButtons from '@/components/shared/SocialShareButtons';
 import { useDiagnosisSession } from '@/lib/hooks/useDiagnosisSession';
 import { SubscriptionService } from '@/lib/services/SubscriptionService';
+import { calculateDiagnosis } from '@/lib/calculations/CalculationService';
+import { saveDiagnosisResult } from '@/lib/storage/StorageService';
 import { Subscription } from '@/types';
 
 export default function ResultsPage() {
@@ -24,6 +26,12 @@ export default function ResultsPage() {
   
   const [subscriptionDetails, setSubscriptionDetails] = useState<Record<string, Subscription>>({});
   const [servicesLoading, setServicesLoading] = useState(true);
+  const [localDiagnosisResult, setLocalDiagnosisResult] = useState(diagnosisResult);
+  
+  // Sync local state with hook state
+  useEffect(() => {
+    setLocalDiagnosisResult(diagnosisResult);
+  }, [diagnosisResult]);
 
   useEffect(() => {
     // Redirect if no user subscriptions
@@ -44,9 +52,23 @@ export default function ResultsPage() {
         setSubscriptionDetails(details);
 
         // Calculate diagnosis if we have subscriptions but no result yet
-        // Only calculate if we have the expected number of subscriptions
-        if (userSubscriptions.length > 0 && !diagnosisResult) {
-          await calculateResults();
+        // OR if the result doesn't match current subscriptions
+        const shouldRecalculate = userSubscriptions.length > 0 && (
+          !diagnosisResult || 
+          diagnosisResult.subscriptions.length !== userSubscriptions.length ||
+          !diagnosisResult.subscriptions.every(resultSub => 
+            userSubscriptions.some(userSub => 
+              userSub.subscriptionId === resultSub.subscriptionId &&
+              userSub.usageFrequency === resultSub.usageFrequency
+            )
+          )
+        );
+        
+        if (shouldRecalculate) {
+          // Recalculate with all available subscriptions (including custom)
+          const result = calculateDiagnosis(userSubscriptions, services);
+          setLocalDiagnosisResult(result);
+          saveDiagnosisResult(result);
         }
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -77,7 +99,7 @@ export default function ResultsPage() {
     );
   }
 
-  if (!diagnosisResult) {
+  if (!localDiagnosisResult) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -134,19 +156,19 @@ export default function ResultsPage() {
           </div>
 
           {/* Chart Visualization */}
-          {diagnosisResult && (
+          {localDiagnosisResult && (
             <div className="mb-8">
               <WasteChart
-                diagnosisResult={diagnosisResult}
+                diagnosisResult={localDiagnosisResult}
                 subscriptionDetails={subscriptionDetails}
               />
             </div>
           )}
 
           {/* Detailed Results */}
-          {diagnosisResult && (
+          {localDiagnosisResult && (
             <ResultsSummary
-              diagnosisResult={diagnosisResult}
+              diagnosisResult={localDiagnosisResult}
               userSubscriptions={userSubscriptions}
               subscriptionDetails={subscriptionDetails}
               onRestart={handleRestart}
@@ -155,10 +177,10 @@ export default function ResultsPage() {
           )}
 
           {/* Social Share Section */}
-          {diagnosisResult && showShareButtons && (
+          {localDiagnosisResult && showShareButtons && (
             <div className="mt-8">
               <SocialShareButtons
-                diagnosisResult={diagnosisResult}
+                diagnosisResult={localDiagnosisResult}
                 className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm"
               />
             </div>

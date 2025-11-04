@@ -1,7 +1,7 @@
 // SubCheck Diagnosis Calculator
 // Calculates waste rate and annual waste amount based on usage frequency
 
-import { UserSubscription, DiagnosisResult, FrequencyBreakdown, ComparisonItem, RecommendationItem } from '@/types';
+import { UserSubscription, DiagnosisResult, FrequencyBreakdown, ComparisonItem, RecommendationItem, Subscription } from '@/types';
 import { SUBSCRIPTION_DATA } from '@/lib/data/subscriptions';
 
 // Frequency multipliers based on actual usage vs paid amount  
@@ -58,11 +58,17 @@ const COMPARISON_EXAMPLES: ComparisonItem[] = [
   }
 ];
 
-function getSubscriptionById(id: string) {
-  return SUBSCRIPTION_DATA.find(sub => sub.id === id);
+function getSubscriptionById(id: string, allSubscriptions: Subscription[]) {
+  return allSubscriptions.find(sub => sub.id === id);
 }
 
-export function calculateDiagnosis(userSubscriptions: UserSubscription[]): DiagnosisResult {
+export function calculateDiagnosis(
+  userSubscriptions: UserSubscription[], 
+  allSubscriptions?: Subscription[]
+): DiagnosisResult {
+  // Use provided subscriptions or fall back to static data
+  const subscriptionData = allSubscriptions || SUBSCRIPTION_DATA;
+  
   let totalMonthly = 0;
   let totalWasteMonthly = 0;
   const frequencyBreakdown: FrequencyBreakdown = {
@@ -74,8 +80,12 @@ export function calculateDiagnosis(userSubscriptions: UserSubscription[]): Diagn
 
   // Calculate totals and breakdown
   userSubscriptions.forEach(userSub => {
-    const subscription = getSubscriptionById(userSub.subscriptionId);
-    if (!subscription) return;
+    const subscription = getSubscriptionById(userSub.subscriptionId, subscriptionData);
+    
+    if (!subscription) {
+      console.warn(`❌ Subscription not found: ${userSub.subscriptionId}`);
+      return;
+    }
 
     const price = subscription.monthlyPrice;
     const wasteMultiplier = FREQUENCY_MULTIPLIERS[userSub.usageFrequency];
@@ -93,7 +103,7 @@ export function calculateDiagnosis(userSubscriptions: UserSubscription[]): Diagn
   const comparisonItems = generateComparisonItems(annualWaste);
 
   // Generate recommendations
-  const recommendations = generateRecommendations(userSubscriptions);
+  const recommendations = generateRecommendations(userSubscriptions, subscriptionData);
 
   return {
     subscriptions: userSubscriptions,
@@ -131,11 +141,11 @@ function generateComparisonItems(wasteAmount: number): ComparisonItem[] {
     .slice(0, 3);
 }
 
-function generateRecommendations(userSubscriptions: UserSubscription[]): RecommendationItem[] {
+function generateRecommendations(userSubscriptions: UserSubscription[], subscriptionData: Subscription[]): RecommendationItem[] {
   const recommendations: RecommendationItem[] = [];
 
   userSubscriptions.forEach(userSub => {
-    const subscription = getSubscriptionById(userSub.subscriptionId);
+    const subscription = getSubscriptionById(userSub.subscriptionId, subscriptionData);
     if (!subscription) return;
 
     const price = subscription.monthlyPrice;
