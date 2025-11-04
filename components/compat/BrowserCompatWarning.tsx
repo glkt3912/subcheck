@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGracefulDegradation } from '@/lib/hooks/useBrowserCompat';
@@ -14,7 +14,6 @@ export default function BrowserCompatWarning({
   onDismiss, 
   showRecommendations = true 
 }: BrowserCompatWarningProps) {
-  const [isVisible, setIsVisible] = useState(false);
   const { 
     isCompatible, 
     browserInfo, 
@@ -23,31 +22,33 @@ export default function BrowserCompatWarning({
     getRecommendedBrowsers 
   } = useGracefulDegradation();
 
-  useEffect(() => {
-    // Show warning if browser is not compatible or has warnings
-    if (!isCompatible || warnings.length > 0) {
-      setIsVisible(true);
+  // Track manual dismissal separately from computed visibility
+  const [isDismissed, setIsDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('subcheck_compat_warning_dismissed') === 'true';
+    } catch {
+      return false;
     }
-  }, [isCompatible, warnings]);
+  });
+
+  // Compute visibility as derived state
+  const shouldShowBasedOnCompat = !isCompatible || warnings.length > 0;
+  const isVisible = shouldShowBasedOnCompat && !isDismissed;
 
   const handleDismiss = () => {
-    setIsVisible(false);
+    setIsDismissed(true);
     onDismiss?.();
     // Remember user dismissed the warning
-    localStorage.setItem('subcheck_compat_warning_dismissed', 'true');
+    try {
+      localStorage.setItem('subcheck_compat_warning_dismissed', 'true');
+    } catch {
+      // If localStorage is not available, dismissal will only last for current session
+    }
   };
 
   const handleDownloadBrowser = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
-
-  // Don't show if already dismissed or no issues
-  useEffect(() => {
-    const wasDismissed = localStorage.getItem('subcheck_compat_warning_dismissed');
-    if (wasDismissed === 'true' && isCompatible && warnings.length === 0) {
-      setIsVisible(false);
-    }
-  }, [isCompatible, warnings]);
 
   if (!isVisible) {
     return null;
@@ -167,13 +168,13 @@ export default function BrowserCompatWarning({
  */
 export function CompactBrowserWarning() {
   const { isCompatible, warnings } = useGracefulDegradation();
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    if (!isCompatible || warnings.length > 0) {
-      setIsVisible(true);
-    }
-  }, [isCompatible, warnings]);
+  
+  // Track manual dismissal
+  const [isDismissed, setIsDismissed] = useState(false);
+  
+  // Compute visibility as derived state
+  const shouldShowBasedOnCompat = !isCompatible || warnings.length > 0;
+  const isVisible = shouldShowBasedOnCompat && !isDismissed;
 
   if (!isVisible) {
     return null;
@@ -189,7 +190,7 @@ export function CompactBrowserWarning() {
           </p>
         </div>
         <button
-          onClick={() => setIsVisible(false)}
+          onClick={() => setIsDismissed(true)}
           className="text-yellow-600 hover:text-yellow-800 font-bold"
         >
           ×

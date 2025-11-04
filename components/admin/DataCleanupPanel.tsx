@@ -1,23 +1,37 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { 
-  DataCleanupService, 
   CleanupResult, 
   CleanupPresets,
   useDataCleanup 
 } from '@/lib/utils/dataCleanup';
 
 export default function DataCleanupPanel() {
-  const [storageStats, setStorageStats] = useState<any>(null);
+  const [storageStats, setStorageStats] = useState<{
+    used: number;
+    available: number;
+    percentage: number;
+    itemCount: number;
+    subcheckItemCount: number;
+  } | null>(null);
   const [cleanupResults, setCleanupResults] = useState<CleanupResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastCleanup, setLastCleanup] = useState<Date | null>(null);
 
   const { performCleanup, getStorageStats, emergencyCleanup } = useDataCleanup();
+
+  const refreshStorageStats = useCallback(async () => {
+    try {
+      const stats = await getStorageStats();
+      setStorageStats(stats);
+    } catch (error) {
+      console.error('Failed to get storage stats:', error);
+    }
+  }, [getStorageStats]);
 
   useEffect(() => {
     refreshStorageStats();
@@ -27,11 +41,7 @@ export default function DataCleanupPanel() {
     if (lastCleanupTime) {
       setLastCleanup(new Date(lastCleanupTime));
     }
-  }, []);
-
-  const refreshStorageStats = () => {
-    setStorageStats(getStorageStats());
-  };
+  }, [refreshStorageStats]);
 
   const handleCleanup = async (preset: 'conservative' | 'aggressive' | 'development') => {
     setIsLoading(true);

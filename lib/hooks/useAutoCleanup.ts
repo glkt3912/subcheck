@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DataCleanupService, CleanupConfig } from '@/lib/utils/dataCleanup';
+
+import { CleanupResult } from '@/lib/utils/dataCleanup';
 
 interface AutoCleanupOptions {
   enabled?: boolean;
   intervalHours?: number;
   config?: CleanupConfig;
-  onCleanupComplete?: (results: any[]) => void;
+  onCleanupComplete?: (results: CleanupResult[]) => void;
   onError?: (error: Error) => void;
 }
 
@@ -24,7 +26,7 @@ export function useAutoCleanup(options: AutoCleanupOptions = {}) {
   } = options;
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastCleanupRef = useRef<Date | null>(null);
+  const [lastCleanup, setLastCleanup] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -50,7 +52,7 @@ export function useAutoCleanup(options: AutoCleanupOptions = {}) {
         
         // Update last cleanup time
         localStorage.setItem('subcheck_last_auto_cleanup', now.toISOString());
-        lastCleanupRef.current = now;
+        setLastCleanup(now);
 
         console.log('Automatic cleanup completed:', results);
         onCleanupComplete?.(results);
@@ -81,7 +83,7 @@ export function useAutoCleanup(options: AutoCleanupOptions = {}) {
       const results = await DataCleanupService.performFullCleanup(config);
       const now = new Date();
       localStorage.setItem('subcheck_last_auto_cleanup', now.toISOString());
-      lastCleanupRef.current = now;
+      setLastCleanup(now);
       onCleanupComplete?.(results);
       return results;
     } catch (error) {
@@ -92,7 +94,7 @@ export function useAutoCleanup(options: AutoCleanupOptions = {}) {
 
   return {
     triggerCleanup,
-    lastCleanup: lastCleanupRef.current
+    lastCleanup
   };
 }
 
@@ -148,7 +150,7 @@ export function useStorageMonitor(options: {
  * Hook for cleanup notifications
  */
 export function useCleanupNotifications() {
-  const showCleanupNotification = (results: any[]) => {
+  const showCleanupNotification = (results: CleanupResult[]) => {
     const totalItemsRemoved = results.reduce((sum, result) => sum + result.itemsRemoved, 0);
     const totalSpaceFreed = results.reduce((sum, result) => sum + result.storageFreed, 0);
 

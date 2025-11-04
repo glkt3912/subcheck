@@ -1,7 +1,7 @@
 // SubCheck Diagnosis Calculator
 // Calculates waste rate and annual waste amount based on usage frequency
 
-import { UserSubscription, DiagnosisResult, FrequencyType, FrequencyBreakdown, ComparisonItem, RecommendationItem, UsageFrequency } from '@/types';
+import { UserSubscription, DiagnosisResult, FrequencyBreakdown, ComparisonItem, RecommendationItem } from '@/types';
 import { SUBSCRIPTION_DATA } from '@/lib/data/subscriptions';
 
 // Frequency multipliers based on actual usage vs paid amount  

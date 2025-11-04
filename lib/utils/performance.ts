@@ -24,7 +24,7 @@ export function useDebounce<T>(value: T, delay: number): T {
 /**
  * Custom hook for throttling function calls
  */
-export function useThrottle<T extends (...args: any[]) => any>(
+export function useThrottle<T extends (...args: never[]) => unknown>(
   func: T,
   delay: number
 ): T {
@@ -42,8 +42,15 @@ export function useThrottle<T extends (...args: any[]) => any>(
 /**
  * Memoized subscription sorting for better performance
  */
+interface Subscription {
+  name: string;
+  monthlyPrice?: number;
+  category: string;
+  [key: string]: unknown;
+}
+
 export const useMemoizedSubscriptionSort = (
-  subscriptions: any[],
+  subscriptions: Subscription[],
   sortKey: string
 ) => {
   return useMemo(() => {
@@ -67,9 +74,20 @@ export const useMemoizedSubscriptionSort = (
 /**
  * Optimized calculation memoization
  */
+interface UserSubscription {
+  subscriptionId: string;
+  usageFrequency: 'daily' | 'weekly' | 'monthly' | 'unused';
+  [key: string]: unknown;
+}
+
+interface SubscriptionDetail {
+  monthlyPrice?: number;
+  [key: string]: unknown;
+}
+
 export const useMemoizedCalculation = (
-  userSubscriptions: any[],
-  subscriptionDetails: Record<string, any>
+  userSubscriptions: UserSubscription[],
+  subscriptionDetails: Record<string, SubscriptionDetail>
 ) => {
   return useMemo(() => {
     if (!userSubscriptions?.length) {
@@ -155,9 +173,9 @@ export class PerformanceMonitor {
 /**
  * Lazy loading utility for components
  */
-export const createLazyComponent = <T extends React.ComponentType<any>>(
-  importFunc: () => Promise<{ default: T }>,
-  fallback?: React.ComponentType
+export const createLazyComponent = <T extends React.ComponentType<Record<string, unknown>>>(
+  importFunc: () => Promise<{ default: T }>
+  // fallback parameter not currently used in this implementation
 ) => {
   return React.lazy(importFunc);
 };
@@ -167,7 +185,7 @@ export const createLazyComponent = <T extends React.ComponentType<any>>(
  */
 export const logMemoryUsage = (): void => {
   if (process.env.NODE_ENV === 'development' && 'memory' in performance) {
-    const memory = (performance as any).memory;
+    const memory = (performance as PerformanceWithMemory).memory;
     console.log('Memory usage:', {
       used: `${Math.round(memory.usedJSHeapSize / 1024 / 1024)}MB`,
       total: `${Math.round(memory.totalJSHeapSize / 1024 / 1024)}MB`,
@@ -177,13 +195,25 @@ export const logMemoryUsage = (): void => {
 };
 
 // Web Vitals monitoring
+interface PerformanceWithMemory extends Performance {
+  memory: {
+    usedJSHeapSize: number;
+    totalJSHeapSize: number;
+    jsHeapSizeLimit: number;
+  };
+}
+
+interface LayoutShiftEntry extends PerformanceEntry {
+  value: number;
+}
+
 export const setupWebVitals = (): void => {
   if (typeof window !== 'undefined') {
     // Monitor Cumulative Layout Shift
     new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
-        if ((entry as any).value > 0.1) {
-          console.warn('High CLS detected:', (entry as any).value);
+        if ((entry as LayoutShiftEntry).value > 0.1) {
+          console.warn('High CLS detected:', (entry as LayoutShiftEntry).value);
         }
       }
     }).observe({ entryTypes: ['layout-shift'] });

@@ -24,7 +24,6 @@ export default function ResultsPage() {
   
   const [subscriptionDetails, setSubscriptionDetails] = useState<Record<string, Subscription>>({});
   const [servicesLoading, setServicesLoading] = useState(true);
-  const subscriptionService = new SubscriptionService();
 
   useEffect(() => {
     // Redirect if no user subscriptions
@@ -36,6 +35,7 @@ export default function ResultsPage() {
     const loadData = async () => {
       try {
         // Load subscription details
+        const subscriptionService = new SubscriptionService();
         const services = await subscriptionService.getAllSubscriptions();
         const details: Record<string, Subscription> = {};
         services.forEach(sub => {

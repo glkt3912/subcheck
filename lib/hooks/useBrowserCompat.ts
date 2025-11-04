@@ -23,7 +23,7 @@ interface BrowserCompatInfo {
     webWorkers: boolean;
     modernJS: boolean;
   };
-  storage: Storage | any;
+  storage: Storage;
   warnings: string[];
   isCompatible: boolean;
 }
@@ -36,35 +36,41 @@ export function useBrowserCompat(): BrowserCompatInfo {
 
   useEffect(() => {
     // Initialize compatibility on client side only
-    const initCompat = CompatibilityManager.initialize();
-    
-    const features = {
-      localStorage: BrowserFeatureDetector.isLocalStorageAvailable(),
-      sessionStorage: BrowserFeatureDetector.isSessionStorageAvailable(),
-      indexedDB: BrowserFeatureDetector.isIndexedDBAvailable(),
-      cssGrid: BrowserFeatureDetector.isCSSGridSupported(),
-      flexbox: BrowserFeatureDetector.isFlexboxSupported(),
-      intersectionObserver: BrowserFeatureDetector.isIntersectionObserverSupported(),
-      webWorkers: BrowserFeatureDetector.isWebWorkerSupported(),
-      modernJS: BrowserFeatureDetector.isModernBrowserSupported(),
+    const initializeCompat = () => {
+      const initCompat = CompatibilityManager.initialize();
+      
+      const features = {
+        localStorage: BrowserFeatureDetector.isLocalStorageAvailable(),
+        sessionStorage: BrowserFeatureDetector.isSessionStorageAvailable(),
+        indexedDB: BrowserFeatureDetector.isIndexedDBAvailable(),
+        cssGrid: BrowserFeatureDetector.isCSSGridSupported(),
+        flexbox: BrowserFeatureDetector.isFlexboxSupported(),
+        intersectionObserver: BrowserFeatureDetector.isIntersectionObserverSupported(),
+        webWorkers: BrowserFeatureDetector.isWebWorkerSupported(),
+        modernJS: BrowserFeatureDetector.isModernBrowserSupported(),
+      };
+
+      const isCompatible = initCompat.browserInfo.isSupported && 
+                          features.modernJS && 
+                          (features.localStorage || features.sessionStorage);
+
+      const newCompatInfo = {
+        browserInfo: initCompat.browserInfo,
+        features,
+        storage: initCompat.storage,
+        warnings: initCompat.warnings,
+        isCompatible
+      };
+
+      setCompatInfo(newCompatInfo);
+
+      // Show warnings if any
+      if (initCompat.warnings.length > 0) {
+        CompatibilityManager.showCompatibilityWarnings(initCompat.warnings);
+      }
     };
 
-    const isCompatible = initCompat.browserInfo.isSupported && 
-                        features.modernJS && 
-                        (features.localStorage || features.sessionStorage);
-
-    setCompatInfo({
-      browserInfo: initCompat.browserInfo,
-      features,
-      storage: initCompat.storage,
-      warnings: initCompat.warnings,
-      isCompatible
-    });
-
-    // Show warnings if any
-    if (initCompat.warnings.length > 0) {
-      CompatibilityManager.showCompatibilityWarnings(initCompat.warnings);
-    }
+    initializeCompat();
   }, []);
 
   return compatInfo || {
@@ -172,7 +178,7 @@ export function useFeatureDetection() {
             time: Date.now()
           })) as IntersectionObserverEntry[];
           
-          callback(entries, null as any);
+          callback(entries, {} as IntersectionObserver);
         };
 
         window.addEventListener('scroll', fallbackCallback);

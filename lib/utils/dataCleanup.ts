@@ -54,8 +54,8 @@ export class DataCleanupService {
             result.itemsRemoved++;
             result.storageFreed += size;
           }
-        } catch (error) {
-          result.errors.push(`Failed to process key ${key}: ${error}`);
+        } catch (_error) {
+          result.errors.push(`Failed to process key ${key}: ${_error}`);
         }
       }
 
@@ -90,7 +90,7 @@ export class DataCleanupService {
       const customSubscriptions = JSON.parse(customSubscriptionsData);
       const referencedIds = this.getReferencedSubscriptionIds();
       
-      const cleanedSubscriptions = customSubscriptions.filter((sub: any) => {
+      const cleanedSubscriptions = customSubscriptions.filter((sub: { id: string; [key: string]: unknown }) => {
         const isReferenced = referencedIds.has(sub.id);
         if (!isReferenced) {
           result.itemsRemoved++;
@@ -318,9 +318,9 @@ export class DataCleanupService {
             data.selectedServices.forEach((id: string) => referencedIds.add(id));
           }
           if (data.userSubscriptions) {
-            data.userSubscriptions.forEach((sub: any) => referencedIds.add(sub.subscriptionId));
+            data.userSubscriptions.forEach((sub: { subscriptionId: string; [key: string]: unknown }) => referencedIds.add(sub.subscriptionId));
           }
-        } catch (error) {
+        } catch {
           // Ignore parsing errors
         }
       }
@@ -331,35 +331,38 @@ export class DataCleanupService {
     return referencedIds;
   }
 
-  private static validateDataStructure(key: string, data: any): boolean {
+  private static validateDataStructure(key: string, data: unknown): boolean {
     try {
       if (key.includes('diagnosis_session')) {
-        return data && 
-               typeof data.currentStep === 'string' &&
-               Array.isArray(data.selectedServices) &&
-               typeof data.lastUpdated === 'string';
+        const sessionData = data as Record<string, unknown>;
+        return !!(data && 
+               typeof sessionData.currentStep === 'string' &&
+               Array.isArray(sessionData.selectedServices) &&
+               typeof sessionData.lastUpdated === 'string');
       }
 
       if (key.includes('custom_subscriptions')) {
         return Array.isArray(data) &&
-               data.every((item: any) => 
-                 typeof item.id === 'string' &&
-                 typeof item.name === 'string' &&
-                 typeof item.monthlyPrice === 'number'
+               data.every((item: unknown) => 
+                 typeof item === 'object' && item !== null &&
+                 'id' in item && typeof (item as Record<string, unknown>).id === 'string' &&
+                 'name' in item && typeof (item as Record<string, unknown>).name === 'string' &&
+                 'monthlyPrice' in item && typeof (item as Record<string, unknown>).monthlyPrice === 'number'
                );
       }
 
       if (key.includes('user_subscriptions')) {
         return Array.isArray(data) &&
-               data.every((item: any) =>
-                 typeof item.subscriptionId === 'string' &&
-                 typeof item.usageFrequency === 'string'
+               data.every((item: unknown) =>
+                 typeof item === 'object' && item !== null &&
+                 'subscriptionId' in item && typeof (item as Record<string, unknown>).subscriptionId === 'string' &&
+                 'usageFrequency' in item && typeof (item as Record<string, unknown>).usageFrequency === 'string'
                );
       }
 
       // Default validation - ensure it's a valid object
       return data !== null && typeof data === 'object';
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

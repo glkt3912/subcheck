@@ -185,13 +185,8 @@ export class SafeStorage {
       return fallback;
     }
     
-    const result = ErrorHandler.safeStorageOperation(
-      () => {
-        const stored = localStorage.getItem(key);
-        return stored ? JSON.parse(stored) : fallback;
-      },
-      `getItem(${key})`
-    );
+    // Note: Async operation not used in this sync implementation
+    // const result = ErrorHandler.safeStorageOperation(...);
     
     // Since this is sync operation for compatibility, we use a simpler approach
     try {

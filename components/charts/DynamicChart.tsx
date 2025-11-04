@@ -2,13 +2,14 @@
 
 import { lazy, Suspense } from 'react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { DiagnosisResult, Subscription } from '@/types';
 
 // Dynamic import for recharts to reduce initial bundle size
 const WasteChart = lazy(() => import('./WasteChart'));
 
 interface DynamicChartProps {
-  diagnosisResult: any;
-  subscriptionDetails: any;
+  diagnosisResult: DiagnosisResult;
+  subscriptionDetails: Record<string, Subscription>;
 }
 
 export default function DynamicChart(props: DynamicChartProps) {
