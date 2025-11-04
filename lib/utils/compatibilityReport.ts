@@ -97,8 +97,8 @@ export class CompatibilityReporter {
    * Generate personalized recommendations
    */
   private static generateRecommendations(
-    browserInfo: any, 
-    features: any
+    browserInfo: { name: string; version: string; isSupported: boolean }, 
+    features: CompatibilityReport['features']
   ): string[] {
     const recommendations: string[] = [];
 
@@ -144,7 +144,7 @@ export class CompatibilityReporter {
   /**
    * Calculate overall compatibility score
    */
-  private static calculateOverallScore(features: any): number {
+  private static calculateOverallScore(features: CompatibilityReport['features']): number {
     const weights = {
       high: 3,
       medium: 2,
@@ -154,7 +154,7 @@ export class CompatibilityReporter {
     let totalWeight = 0;
     let achievedWeight = 0;
 
-    Object.values(features).forEach((feature: any) => {
+    Object.values(features).forEach((feature) => {
       const weight = weights[feature.impactLevel as keyof typeof weights];
       totalWeight += weight;
       

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useAutoCleanup, useStorageMonitor, useCleanupNotifications } from '@/lib/hooks/useAutoCleanup';
 import { CleanupPresets } from '@/lib/utils/dataCleanup';
 
@@ -28,7 +28,7 @@ export default function CleanupProvider({
   const [isCleanupEnabled, setIsCleanupEnabled] = useState(autoCleanupEnabled);
   const [storageUsage, setStorageUsage] = useState(0);
 
-  const { showCleanupNotification, requestNotificationPermission } = useCleanupNotifications();
+  const { showCleanupNotification, requestNotificationPermission: requestPermission } = useCleanupNotifications();
 
   // Auto cleanup hook
   const { triggerCleanup, lastCleanup } = useAutoCleanup({
@@ -55,14 +55,19 @@ export default function CleanupProvider({
     checkInterval: 300000 // Check every 5 minutes
   });
 
-  const updateStorageUsage = () => {
+  const updateStorageUsage = useCallback(() => {
     try {
       const stats = getStorageStats();
       setStorageUsage(stats.percentage);
     } catch (error) {
       console.error('Failed to update storage usage:', error);
     }
-  };
+  }, [getStorageStats]);
+
+  const requestNotificationPermission = useCallback(() => {
+    // Implementation for requesting notification permission
+    requestPermission();
+  }, [requestPermission]);
 
   useEffect(() => {
     // Initial storage usage check
@@ -75,7 +80,7 @@ export default function CleanupProvider({
     const interval = setInterval(updateStorageUsage, 60000); // Every minute
 
     return () => clearInterval(interval);
-  }, []);
+  }, [updateStorageUsage, requestNotificationPermission]);
 
   const toggleAutoCleanup = () => {
     setIsCleanupEnabled(prev => !prev);

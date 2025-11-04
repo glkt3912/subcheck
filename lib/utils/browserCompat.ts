@@ -14,7 +14,7 @@ export class BrowserFeatureDetector {
       window.localStorage.setItem(test, test);
       window.localStorage.removeItem(test);
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }
@@ -28,7 +28,7 @@ export class BrowserFeatureDetector {
       window.sessionStorage.setItem(test, test);
       window.sessionStorage.removeItem(test);
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }
@@ -93,7 +93,7 @@ export class BrowserFeatureDetector {
         !!Array.prototype.includes &&
         !!Object.assign
       );
-    } catch (e) {
+    } catch {
       return false;
     }
   }
@@ -174,9 +174,9 @@ export class StorageFallback {
       get length(): number {
         return storage.size;
       },
-      key: (index: number): string | null => {
+      key: (_index: number): string | null => {
         const keys = Array.from(storage.keys());
-        return keys[index] || null;
+        return keys[_index] || null;
       }
     };
   }
@@ -221,7 +221,7 @@ export class StorageFallback {
       get length(): number {
         return 0; // Simplified implementation
       },
-      key: (index: number): string | null => {
+      key: (_index: number): string | null => {
         return null; // Simplified implementation
       }
     };
@@ -322,7 +322,7 @@ export class JSPolyfills {
    */
   static addArrayIncludesPolyfill(): void {
     if (!Array.prototype.includes) {
-      Array.prototype.includes = function(searchElement: any, fromIndex?: number): boolean {
+      Array.prototype.includes = function<T>(this: T[], searchElement: T, fromIndex?: number): boolean {
         const len = this.length;
         const start = Math.max(fromIndex || 0, fromIndex! < 0 ? len + fromIndex! : 0);
         
@@ -341,7 +341,7 @@ export class JSPolyfills {
    */
   static addObjectAssignPolyfill(): void {
     if (!Object.assign) {
-      Object.assign = function(target: any, ...sources: any[]): any {
+      Object.assign = function(target: Record<string, unknown>, ...sources: Record<string, unknown>[]): Record<string, unknown> {
         if (target == null) {
           throw new TypeError('Cannot convert undefined or null to object');
         }
@@ -370,18 +370,18 @@ export class JSPolyfills {
   static addPromisePolyfill(): void {
     if (typeof Promise === 'undefined') {
       // Basic Promise polyfill - in production, use a full polyfill like es6-promise
-      (window as any).Promise = class BasicPromise {
-        constructor(executor: Function) {
+      (window as unknown as Record<string, unknown>).Promise = class BasicPromise {
+        constructor(_executor: (resolve: (value: unknown) => void, reject: (reason: unknown) => void) => void) {
           console.warn('Using basic Promise polyfill. Consider using a full polyfill.');
           // Simplified implementation
         }
         
-        static resolve(value: any) {
-          return new (this as any)((resolve: Function) => resolve(value));
+        static resolve(value: unknown) {
+          return new (this as new (executor: (resolve: (value: unknown) => void, reject: (reason: unknown) => void) => void) => BasicPromise)((resolve: (value: unknown) => void) => resolve(value));
         }
         
-        static reject(reason: any) {
-          return new (this as any)((resolve: Function, reject: Function) => reject(reason));
+        static reject(reason: unknown) {
+          return new (this as new (executor: (resolve: (value: unknown) => void, reject: (reason: unknown) => void) => void) => BasicPromise)((_resolve: (value: unknown) => void, reject: (reason: unknown) => void) => reject(reason));
         }
       };
     }
@@ -425,7 +425,7 @@ export class CompatibilityManager {
     CSSPolyfills.addCustomPropertiesFallback();
 
     // Set up storage
-    const storage = StorageFallback.getBestAvailableStorage();
+    // const storage = StorageFallback.getBestAvailableStorage(); // Currently unused for performance testing
     
     if (!BrowserFeatureDetector.isLocalStorageAvailable()) {
       warnings.push('LocalStorageが利用できません。データは一時的に保存されます。');
@@ -442,7 +442,7 @@ export class CompatibilityManager {
 
     return {
       browserInfo,
-      storage: null as any, // Temporarily disable for performance testing
+      storage: null as unknown as Storage, // Temporarily disable for performance testing
       warnings
     };
   }

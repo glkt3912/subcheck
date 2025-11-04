@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { 
   BrowserFeatureDetector, 
   StorageFallback, 
@@ -61,7 +61,7 @@ Object.defineProperty(global, 'navigator', {
 // Mock CSS object for compatibility tests
 Object.defineProperty(global, 'CSS', {
   value: {
-    supports: vi.fn((property: string, value: string) => true)
+    supports: vi.fn(() => true)
   },
   writable: true
 });
@@ -174,7 +174,7 @@ describe('StorageFallback', () => {
   describe('getMemoryStorage', () => {
     it('should provide working storage interface', () => {
       // Clear any existing memory storage before test
-      const MemoryStorageClass = (StorageFallback as any).MemoryStorage;
+      const MemoryStorageClass = (StorageFallback as { MemoryStorage?: { instance?: { clear(): void } } }).MemoryStorage;
       if (MemoryStorageClass && MemoryStorageClass.instance) {
         MemoryStorageClass.instance.clear();
       }
@@ -192,7 +192,7 @@ describe('StorageFallback', () => {
 
     it('should handle multiple items', () => {
       // Clear any existing memory storage before test
-      const MemoryStorageClass = (StorageFallback as any).MemoryStorage;
+      const MemoryStorageClass = (StorageFallback as { MemoryStorage?: { instance?: { clear(): void } } }).MemoryStorage;
       if (MemoryStorageClass && MemoryStorageClass.instance) {
         MemoryStorageClass.instance.clear();
       }
