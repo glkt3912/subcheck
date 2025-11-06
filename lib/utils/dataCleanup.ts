@@ -54,8 +54,8 @@ export class DataCleanupService {
             result.itemsRemoved++;
             result.storageFreed += size;
           }
-        } catch (_error) {
-          result.errors.push(`Failed to process key ${key}: ${_error}`);
+        } catch (error) {
+          result.errors.push(`Failed to process key ${key}: ${error}`);
         }
       }
 
@@ -362,7 +362,7 @@ export class DataCleanupService {
 
       // Default validation - ensure it's a valid object
       return data !== null && typeof data === 'object';
-    } catch (_error) {
+    } catch {
       return false;
     }
   }

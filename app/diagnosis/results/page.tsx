@@ -78,7 +78,7 @@ export default function ResultsPage() {
     };
 
     loadData();
-  }, [isLoading, userSubscriptions.length, diagnosisResult, calculateResults, router]);
+  }, [isLoading, userSubscriptions, diagnosisResult, calculateResults, router]);
 
   const handleRestart = () => {
     clearSession();

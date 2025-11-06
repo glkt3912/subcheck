@@ -174,9 +174,9 @@ export class StorageFallback {
       get length(): number {
         return storage.size;
       },
-      key: (_index: number): string | null => {
+      key: (index: number): string | null => {
         const keys = Array.from(storage.keys());
-        return keys[_index] || null;
+        return keys[index] || null;
       }
     };
   }
@@ -221,7 +221,7 @@ export class StorageFallback {
       get length(): number {
         return 0; // Simplified implementation
       },
-      key: (_index: number): string | null => {
+      key: (): string | null => {
         return null; // Simplified implementation
       }
     };
@@ -371,7 +371,7 @@ export class JSPolyfills {
     if (typeof Promise === 'undefined') {
       // Basic Promise polyfill - in production, use a full polyfill like es6-promise
       (window as unknown as Record<string, unknown>).Promise = class BasicPromise {
-        constructor(_executor: (resolve: (value: unknown) => void, reject: (reason: unknown) => void) => void) {
+        constructor() {
           console.warn('Using basic Promise polyfill. Consider using a full polyfill.');
           // Simplified implementation
         }

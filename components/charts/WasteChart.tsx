@@ -25,7 +25,18 @@ const USAGE_LABELS = {
 
 // Custom tooltip component
 
-const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
+interface TooltipPayload {
+  payload: {
+    name: string;
+    value: number;
+    usage: string;
+    wasteAmount: number;
+    serviceCount?: number;
+    services?: string[];
+  };
+}
+
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
