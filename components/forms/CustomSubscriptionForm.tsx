@@ -79,6 +79,13 @@ export default function CustomSubscriptionForm({
   const handleInputChange = (fieldName: keyof CustomSubscriptionInput, value: string | number) => {
     setFormData(prev => ({ ...prev, [fieldName]: value }));
     
+    // Real-time validation
+    const validation = validateField(fieldName, value);
+    setErrors(prev => ({
+      ...prev,
+      [fieldName]: validation.isValid ? undefined : validation.error
+    }));
+    
     // Auto-suggest category when name changes
     if (fieldName === 'name' && typeof value === 'string' && value) {
       const suggestedCategory = ValidationUtils.suggestCategory(value as string);
@@ -87,10 +94,8 @@ export default function CustomSubscriptionForm({
       }
     }
     
-    // Clear error when user starts typing
-    if (errors[fieldName]) {
-      setErrors(prev => ({ ...prev, [fieldName]: undefined }));
-    }
+    // Mark field as touched
+    setTouched(prev => ({ ...prev, [fieldName]: true }));
   };
 
   const handleBlur = (fieldName: keyof CustomSubscriptionInput) => {

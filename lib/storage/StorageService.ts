@@ -2,7 +2,8 @@
 // Handles data persistence and retrieval
 
 import type { UserSubscription, DiagnosisResult } from '@/types';
-// Storage utility functions using localStorage with proper error handling
+// Storage utility functions with enhanced fallback support
+import { enhancedStorage } from './StorageWithFallback';
 
 const STORAGE_KEYS = {
   SELECTED_SUBSCRIPTIONS: 'selectedSubscriptions',
@@ -11,91 +12,56 @@ const STORAGE_KEYS = {
   DIAGNOSIS_HISTORY: 'diagnosisHistory'
 } as const;
 
-// Check if localStorage is available
+// Check if localStorage is available (legacy compatibility)
 function isStorageAvailable(): boolean {
-  try {
-    if (typeof window === 'undefined') return false;
-    const test = '__storage_test__';
-    localStorage.setItem(test, test);
-    localStorage.removeItem(test);
-    return true;
-  } catch {
-    return false;
-  }
+  return enhancedStorage.getStorageStatus().available.localStorage;
 }
 
 // Selected Subscriptions Management
 export function saveSelectedSubscriptions(subscriptionIds: string[]): void {
-  if (isStorageAvailable()) {
-    try {
-      localStorage.setItem(STORAGE_KEYS.SELECTED_SUBSCRIPTIONS, JSON.stringify(subscriptionIds));
-    } catch (error) {
-      console.warn('Failed to save selected subscriptions:', error);
-    }
+  const success = enhancedStorage.saveSelectedSubscriptions(subscriptionIds);
+  if (!success) {
+    console.warn('Failed to save selected subscriptions with fallback');
   }
 }
 
 export function getSelectedSubscriptions(): string[] {
-  if (!isStorageAvailable()) return [];
-  try {
-    const stored = localStorage.getItem(STORAGE_KEYS.SELECTED_SUBSCRIPTIONS);
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.warn('Failed to get selected subscriptions:', error);
-    return [];
-  }
+  return enhancedStorage.getSelectedSubscriptions();
 }
 
 // User Subscriptions Management
 export function saveUserSubscriptions(userSubscriptions: UserSubscription[]): void {
-  if (!isStorageAvailable()) {
-    console.warn('localStorage not available, user subscriptions will not persist');
-    return;
-  }
-  try {
-    localStorage.setItem(STORAGE_KEYS.USER_SUBSCRIPTIONS, JSON.stringify(userSubscriptions));
-  } catch (error) {
-    console.warn('Failed to save user subscriptions, diagnosis may not persist:', error);
+  const success = enhancedStorage.saveUserSubscriptions(userSubscriptions);
+  if (!success) {
+    console.warn('Failed to save user subscriptions with fallback');
   }
 }
 
 export function getUserSubscriptions(): UserSubscription[] {
-  if (!isStorageAvailable()) return [];
-  try {
-    const stored = localStorage.getItem(STORAGE_KEYS.USER_SUBSCRIPTIONS);
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.warn('Failed to get user subscriptions:', error);
-    return [];
-  }
+  return enhancedStorage.getUserSubscriptions();
 }
 
 // Diagnosis Result Management
 export function saveDiagnosisResult(result: DiagnosisResult): void {
-  if (!isStorageAvailable()) {
-    console.warn('localStorage not available, diagnosis result will not persist');
-    return;
+  const success = enhancedStorage.saveDiagnosisResult(result);
+  if (!success) {
+    console.warn('Failed to save diagnosis result with fallback');
   }
+  
+  // Also save to history (keeping legacy localStorage for history)
   try {
-    localStorage.setItem(STORAGE_KEYS.DIAGNOSIS_RESULT, JSON.stringify(result));
-    // Also save to history
     const history = getDiagnosisHistory();
     const newHistory = [result, ...history.slice(0, 9)]; // Keep last 10 results
-    localStorage.setItem(STORAGE_KEYS.DIAGNOSIS_HISTORY, JSON.stringify(newHistory));
+    if (isStorageAvailable()) {
+      localStorage.setItem(STORAGE_KEYS.DIAGNOSIS_HISTORY, JSON.stringify(newHistory));
+    }
   } catch (error) {
-    console.warn('Failed to save diagnosis result, results may not persist:', error);
+    console.warn('Failed to save diagnosis history:', error);
   }
 }
 
 export function getDiagnosisResult(): DiagnosisResult | null {
-  if (!isStorageAvailable()) return null;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEYS.DIAGNOSIS_RESULT);
-    return stored ? JSON.parse(stored) : null;
-  } catch (error) {
-    console.warn('Failed to get diagnosis result:', error);
-    return null;
-  }
+  return enhancedStorage.getDiagnosisResult();
 }
 
 // Diagnosis History Management

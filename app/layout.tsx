@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_JP } from "next/font/google";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import "./globals.css";
 
 const notoSansJP = Noto_Sans_JP({
@@ -47,9 +48,11 @@ export default function RootLayout({
         <a href="#main-content" className="skip-link">
           メインコンテンツにスキップ
         </a>
-        <div className="min-h-screen">
-          {children}
-        </div>
+        <ErrorBoundary>
+          <div className="min-h-screen">
+            {children}
+          </div>
+        </ErrorBoundary>
       </body>
     </html>
   );

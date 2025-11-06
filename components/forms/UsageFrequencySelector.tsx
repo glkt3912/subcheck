@@ -16,6 +16,7 @@ const FREQUENCY_OPTIONS = [
     value: UsageFrequency.DAILY,
     label: '毎日',
     description: 'ほぼ毎日使っている',
+    subtext: '効率的な利用です',
     color: 'bg-green-100 text-green-800 border-green-200',
     icon: '🟢',
     wasteMultiplier: 0
@@ -24,6 +25,7 @@ const FREQUENCY_OPTIONS = [
     value: UsageFrequency.WEEKLY,
     label: '週1-2回',
     description: '週に1〜2回程度使っている',
+    subtext: '月額の25%が無駄になる計算',
     color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     icon: '🟡',
     wasteMultiplier: 0.25
@@ -31,7 +33,8 @@ const FREQUENCY_OPTIONS = [
   {
     value: UsageFrequency.MONTHLY,
     label: '月1-2回',
-    description: '月に1〜2回程度使っている',
+    description: '月に1〜2回程度使っている', 
+    subtext: '月額の60%が無駄になる計算',
     color: 'bg-orange-100 text-orange-800 border-orange-200',
     icon: '🟠',
     wasteMultiplier: 0.6
@@ -40,6 +43,7 @@ const FREQUENCY_OPTIONS = [
     value: UsageFrequency.UNUSED,
     label: '未使用',
     description: 'ほとんど使っていない',
+    subtext: '月額の100%が無駄',
     color: 'bg-red-100 text-red-800 border-red-200',
     icon: '🔴',
     wasteMultiplier: 1.0
@@ -139,16 +143,17 @@ export default function UsageFrequencySelector({
                         <span className="text-lg">{option.icon}</span>
                         <span className="font-semibold">{option.label}</span>
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">{option.description}</p>
+                      <p className="text-sm text-gray-600 mb-1">{option.description}</p>
+                      <p className="text-xs text-gray-500 mb-2">{option.subtext}</p>
                       
                       {/* Waste calculation preview */}
                       {option.wasteMultiplier > 0 && (
-                        <div className="text-xs text-red-600 mt-2 pt-2 border-t border-gray-200">
+                        <div className="text-xs text-red-600 mt-2 pt-2 border-t border-gray-200 font-medium">
                           年間無駄: ¥{yearlyWaste.toLocaleString()}
                         </div>
                       )}
                       {option.wasteMultiplier === 0 && (
-                        <div className="text-xs text-green-600 mt-2 pt-2 border-t border-gray-200">
+                        <div className="text-xs text-green-600 mt-2 pt-2 border-t border-gray-200 font-medium">
                           効率的な利用 👍
                         </div>
                       )}
@@ -207,10 +212,13 @@ export default function UsageFrequencySelector({
           <div className="flex items-start space-x-3">
             <span className="text-lg">💡</span>
             <div>
-              <h4 className="font-semibold text-amber-800 mb-1">ヒント</h4>
-              <p className="text-sm text-amber-700">
-                正直な利用頻度を選択することで、より正確な診断結果を得ることができます。
-                無駄を減らすための具体的な提案も表示されます。
+              <h4 className="font-semibold text-amber-800 mb-1">無駄の計算について</h4>
+              <p className="text-sm text-amber-700 mb-2">
+                <strong>月1-2回</strong>の利用は、月額料金に対して60%が「無駄」として計算されます。
+                これは、毎日利用する場合と比較した効率性を示しています。
+              </p>
+              <p className="text-xs text-amber-600">
+                💡 正直な利用頻度を選択することで、より正確な節約提案を得られます。
               </p>
             </div>
           </div>

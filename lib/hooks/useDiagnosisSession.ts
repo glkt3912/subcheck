@@ -98,12 +98,18 @@ export function useDiagnosisSession(): UseDiagnosisSessionReturn {
         if (savedUserSubs.length > 0) {
           setUserSubscriptionsState(savedUserSubs);
 
-          // Extract usage frequencies from user subscriptions
+          // Extract usage frequencies from user subscriptions (only for relevant services)
           const frequencies: Record<string, UsageFrequency> = {};
           savedUserSubs.forEach((sub: UserSubscription) => {
-            frequencies[sub.subscriptionId] = sub.usageFrequency;
+            // Only include if it's in the selected services and has a valid frequency
+            if (savedServices.includes(sub.subscriptionId) && sub.usageFrequency) {
+              frequencies[sub.subscriptionId] = sub.usageFrequency;
+            }
           });
           setUsageFrequenciesState(frequencies);
+        } else {
+          // Ensure clean state if no saved data
+          setUsageFrequenciesState({});
         }
 
         // Load diagnosis result
@@ -120,6 +126,24 @@ export function useDiagnosisSession(): UseDiagnosisSessionReturn {
 
     loadSavedData();
   }, []);
+
+  // Clean up usage frequencies on mount and when selected services change
+  useEffect(() => {
+    if (selectedServices.length > 0) {
+      setUsageFrequenciesState((prev) => {
+        const cleaned: Record<string, UsageFrequency> = {};
+        selectedServices.forEach((serviceId) => {
+          if (prev[serviceId] !== undefined && prev[serviceId] !== null) {
+            cleaned[serviceId] = prev[serviceId];
+          }
+        });
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Cleaned frequencies on service change:', cleaned);
+        }
+        return cleaned;
+      });
+    }
+  }, [selectedServices]);
 
   // Save selected services to storage
   const setSelectedServices = useCallback(
@@ -138,14 +162,17 @@ export function useDiagnosisSession(): UseDiagnosisSessionReturn {
           clearUserSubscriptions();
           clearDiagnosisResult();
         } else {
-          // Filter usage frequencies to only include selected services
+          // Filter usage frequencies to only include selected services and remove undefined values
           setUsageFrequenciesState((prev) => {
             const filtered: Record<string, UsageFrequency> = {};
             services.forEach((serviceId) => {
-              if (prev[serviceId]) {
+              if (prev[serviceId] !== undefined && prev[serviceId] !== null) {
                 filtered[serviceId] = prev[serviceId];
               }
             });
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Filtered usage frequencies:', filtered);
+            }
             return filtered;
           });
         }
@@ -159,12 +186,30 @@ export function useDiagnosisSession(): UseDiagnosisSessionReturn {
   // Set usage frequency for a service
   const setUsageFrequency = useCallback(
     (serviceId: string, frequency: UsageFrequency) => {
-      setUsageFrequenciesState((prev) => ({
-        ...prev,
-        [serviceId]: frequency,
-      }));
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Setting usage frequency:', { serviceId, frequency });
+      }
+      setUsageFrequenciesState((prev) => {
+        // Create clean state with only defined values
+        const newState: Record<string, UsageFrequency> = {};
+        
+        // Copy existing defined values
+        Object.keys(prev).forEach(key => {
+          if (prev[key] !== undefined && selectedServices.includes(key)) {
+            newState[key] = prev[key];
+          }
+        });
+        
+        // Set new frequency
+        newState[serviceId] = frequency;
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Clean usage frequencies state:', newState);
+        }
+        return newState;
+      });
     },
-    []
+    [selectedServices]
   );
 
   // Create user subscriptions from selected services and frequencies
@@ -219,11 +264,31 @@ export function useDiagnosisSession(): UseDiagnosisSessionReturn {
     }
   }, []);
 
-  // Computed state
+  // Computed state  
   const hasSelectedServices = selectedServices.length > 0;
-  const hasAllFrequencies = selectedServices.every(
-    (serviceId) => usageFrequencies[serviceId]
+  
+  // Strategy: Check if all frequencies have been set for the currently selected services
+  // This avoids issues with non-existent services in selectedServices
+  const completedFrequencies = Object.keys(usageFrequencies).filter(key => 
+    selectedServices.includes(key) && 
+    usageFrequencies[key] !== undefined && 
+    usageFrequencies[key] !== null
   );
+  
+  // We consider frequencies complete when we have completed frequencies for all selected services
+  // This accounts for services that may not exist in the current service data
+  const hasAllFrequencies = selectedServices.length > 0 && 
+    completedFrequencies.length >= selectedServices.length;
+  
+  // Debug logging (development only)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Frequency completion check:', {
+      selectedServicesCount: selectedServices.length,
+      completedFrequenciesCount: completedFrequencies.length,
+      completedServices: completedFrequencies,
+      hasAllFrequencies
+    });
+  }
   const hasResults = diagnosisResult !== null;
 
   // Determine current step
