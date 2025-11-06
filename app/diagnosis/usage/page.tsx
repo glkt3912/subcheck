@@ -36,6 +36,15 @@ export default function UsagePage() {
         const subscriptionService = new SubscriptionService();
         const services = await subscriptionService.getAllSubscriptions();
         setAvailableServices(services);
+        
+        // Clean up selected services to only include available ones
+        const availableServiceIds = services.map(s => s.id);
+        const validSelectedServices = selectedServices.filter(id => availableServiceIds.includes(id));
+        
+        if (validSelectedServices.length !== selectedServices.length) {
+          console.log('Cleaning selected services:', selectedServices, '→', validSelectedServices);
+          // Note: Service cleanup will be handled by the hook itself
+        }
       } catch (error) {
         console.error('Failed to load services:', error);
         setAvailableServices([]);
@@ -52,7 +61,7 @@ export default function UsagePage() {
 
     try {
       // Create user subscriptions first
-      await createUserSubscriptions();
+      createUserSubscriptions();
       
       // Wait a bit for state to update, then navigate
       setTimeout(() => {
@@ -122,6 +131,7 @@ export default function UsagePage() {
             onFrequencyChange={setUsageFrequency}
           />
 
+
           {/* Navigation */}
           <div className="flex justify-between mt-8">
             <Button 
@@ -136,6 +146,11 @@ export default function UsagePage() {
               className="bg-blue-600 hover:bg-blue-700"
             >
               診断結果を見る
+              {!hasAllFrequencies && (
+                <span className="ml-2 text-xs opacity-75">
+                  ({selectedServices.length - Object.keys(usageFrequencies).filter(id => selectedServices.includes(id)).length}個未選択)
+                </span>
+              )}
             </Button>
           </div>
         </div>
