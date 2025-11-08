@@ -5,6 +5,20 @@ import {
   CompatibilityManager 
 } from '../browserCompat';
 
+// Mock element interface for createElement
+interface MockElement {
+  style: Partial<CSSStyleDeclaration>;
+  appendChild: ReturnType<typeof vi.fn>;
+  remove: ReturnType<typeof vi.fn>;
+  className?: string;
+  innerHTML?: string;
+}
+
+// Mock navigator interface for userAgent modification
+interface ModifiableNavigator extends Partial<Navigator> {
+  userAgent: string;
+}
+
 // Mock window and document
 const mockWindow = {
   localStorage: {
@@ -24,14 +38,25 @@ const mockWindow = {
     key: vi.fn()
   },
   navigator: {
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-  },
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    clipboard: {} as Clipboard,
+    credentials: {} as CredentialsContainer,
+    doNotTrack: null,
+    geolocation: {} as Geolocation,
+    language: 'en-US',
+    languages: ['en-US'],
+    onLine: true,
+    platform: 'Win32',
+    serviceWorker: {} as ServiceWorkerContainer,
+    storage: {} as StorageManager,
+    webdriver: false
+  } as ModifiableNavigator,
   document: {
     createElement: vi.fn(() => ({
       style: {},
       appendChild: vi.fn(),
       remove: vi.fn()
-    })),
+    } as MockElement)),
     head: {
       appendChild: vi.fn()
     },
@@ -71,7 +96,7 @@ describe('BrowserFeatureDetector', () => {
     vi.clearAllMocks();
     // Reset navigator userAgent to default
     mockWindow.navigator.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
-    global.navigator = mockWindow.navigator;
+    global.navigator = mockWindow.navigator as Navigator;
   });
 
   describe('isLocalStorageAvailable', () => {
@@ -130,6 +155,7 @@ describe('BrowserFeatureDetector', () => {
   describe('getBrowserInfo', () => {
     it('should detect Chrome browser', () => {
       mockWindow.navigator.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
+      global.navigator = mockWindow.navigator as Navigator;
       
       const result = BrowserFeatureDetector.getBrowserInfo();
       expect(result.name).toBe('Chrome');
@@ -139,6 +165,7 @@ describe('BrowserFeatureDetector', () => {
 
     it('should detect Firefox browser', () => {
       mockWindow.navigator.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0';
+      global.navigator = mockWindow.navigator as Navigator;
       
       const result = BrowserFeatureDetector.getBrowserInfo();
       expect(result.name).toBe('Firefox');
@@ -148,6 +175,7 @@ describe('BrowserFeatureDetector', () => {
 
     it('should detect Internet Explorer as unsupported', () => {
       mockWindow.navigator.userAgent = 'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko';
+      global.navigator = mockWindow.navigator as Navigator;
       
       const result = BrowserFeatureDetector.getBrowserInfo();
       expect(result.name).toBe('Internet Explorer');
@@ -156,6 +184,7 @@ describe('BrowserFeatureDetector', () => {
 
     it('should detect old Chrome as unsupported', () => {
       mockWindow.navigator.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36';
+      global.navigator = mockWindow.navigator as Navigator;
       
       const result = BrowserFeatureDetector.getBrowserInfo();
       expect(result.name).toBe('Chrome');
@@ -276,13 +305,10 @@ describe('CompatibilityManager', () => {
     vi.clearAllMocks();
     // Reset DOM mocks
     mockWindow.document.createElement.mockReturnValue({
-      style: {},
+      style: {} as CSSStyleDeclaration,
       appendChild: vi.fn(),
-      remove: vi.fn(),
-      className: '',
-      innerHTML: '',
-      onclick: null
-    });
+      remove: vi.fn()
+    } as MockElement);
   });
 
   describe('initialize', () => {
@@ -300,6 +326,7 @@ describe('CompatibilityManager', () => {
 
     it('should generate warnings for unsupported browsers', () => {
       mockWindow.navigator.userAgent = 'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko';
+      global.navigator = mockWindow.navigator as Navigator;
       
       const result = CompatibilityManager.initialize();
       expect(result.warnings.length).toBeGreaterThan(0);

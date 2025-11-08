@@ -54,7 +54,7 @@ export default function UsagePage() {
     };
 
     loadServices();
-  }, [isLoading, selectedServices.length, router]);
+  }, [isLoading, selectedServices, router]);
 
   const handleNext = async () => {
     if (!hasAllFrequencies) return;
