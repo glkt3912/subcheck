@@ -1,5 +1,5 @@
 // SubCheck Subscription Master Data
-// Simplified for performance testing
+// Updated with 2025 pricing data
 
 import { Subscription, SubscriptionCategory } from '@/types';
 
@@ -25,7 +25,7 @@ export const SUBSCRIPTION_DATA: Subscription[] = [
     id: 'spotify',
     name: 'Spotify Premium',
     category: SubscriptionCategory.MUSIC,
-    monthlyPrice: 1080,
+    monthlyPrice: 1080, // 2025年値上げ後: 980円 → 1080円
     logoUrl: '/logos/spotify.svg',
     isPopular: true
   },
@@ -41,9 +41,9 @@ export const SUBSCRIPTION_DATA: Subscription[] = [
     id: 'youtube-premium',
     name: 'YouTube Premium',
     category: SubscriptionCategory.VIDEO,
-    monthlyPrice: 1280,
+    monthlyPrice: 1280, // 2023年値上げ後: 1180円 → 1280円（現在価格）
     logoUrl: '/logos/youtube.svg',
-    isPopular: false
+    isPopular: true // 人気度上昇のため変更
   },
   {
     id: 'u-next',
@@ -57,7 +57,7 @@ export const SUBSCRIPTION_DATA: Subscription[] = [
     id: 'disney-plus',
     name: 'Disney+',
     category: SubscriptionCategory.VIDEO,
-    monthlyPrice: 1320,
+    monthlyPrice: 1140, // 2025年4月改定: スタンダードプラン
     logoUrl: '/logos/disney-plus.svg',
     isPopular: true
   },
@@ -68,6 +68,88 @@ export const SUBSCRIPTION_DATA: Subscription[] = [
     monthlyPrice: 7780,
     logoUrl: '/logos/adobe.svg',
     isPopular: false
+  },
+  
+  // Music Streaming - Expanded
+  {
+    id: 'youtube-music',
+    name: 'YouTube Music Premium',
+    category: SubscriptionCategory.MUSIC,
+    monthlyPrice: 1080,
+    logoUrl: '/logos/youtube-music.svg',
+    isPopular: true
+  },
+  
+  // Gaming Services
+  {
+    id: 'playstation-plus-extra',
+    name: 'PlayStation Plus Extra',
+    category: SubscriptionCategory.GAMING,
+    monthlyPrice: 1300,
+    logoUrl: '/logos/playstation-plus.svg',
+    isPopular: true
+  },
+  {
+    id: 'nintendo-switch-online',
+    name: 'Nintendo Switch Online',
+    category: SubscriptionCategory.GAMING,
+    monthlyPrice: 490, // 年額2,400円÷12ヶ月
+    logoUrl: '/logos/nintendo-switch.svg',
+    isPopular: true
+  },
+  
+  // Reading & Content
+  {
+    id: 'kindle-unlimited',
+    name: 'Kindle Unlimited',
+    category: SubscriptionCategory.READING,
+    monthlyPrice: 980,
+    logoUrl: '/logos/kindle.svg',
+    isPopular: true
+  },
+  
+  // Cloud & Productivity
+  {
+    id: 'microsoft-365',
+    name: 'Microsoft 365 Personal',
+    category: SubscriptionCategory.UTILITY,
+    monthlyPrice: 1490, // 年額14,900円÷12ヶ月
+    logoUrl: '/logos/microsoft-365.svg',
+    isPopular: true
+  },
+  {
+    id: 'icloud-plus',
+    name: 'iCloud+ (200GB)',
+    category: SubscriptionCategory.UTILITY,
+    monthlyPrice: 400,
+    logoUrl: '/logos/icloud.svg',
+    isPopular: true
+  },
+  
+  // AI Services - 2024-2025年の急成長分野
+  {
+    id: 'chatgpt-plus',
+    name: 'ChatGPT Plus',
+    category: SubscriptionCategory.UTILITY,
+    monthlyPrice: 3000, // iOS版基準（Web版は為替変動あり）
+    logoUrl: '/logos/chatgpt.svg',
+    isPopular: true
+  },
+  {
+    id: 'claude-pro',
+    name: 'Claude Pro',
+    category: SubscriptionCategory.UTILITY,
+    monthlyPrice: 3100, // 20USD（1ドル≈155円）
+    logoUrl: '/logos/claude.svg',
+    isPopular: true
+  },
+  {
+    id: 'gemini-advanced',
+    name: 'Gemini Advanced',
+    category: SubscriptionCategory.UTILITY,
+    monthlyPrice: 2860, // iOS版（税込）
+    logoUrl: '/logos/gemini.svg',
+    isPopular: true
   }
 ];
 
