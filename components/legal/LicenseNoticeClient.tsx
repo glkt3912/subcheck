@@ -19,7 +19,7 @@ export default function LicenseNoticeClient() {
     
     // Add license info to global object for inspection
     if (typeof window !== 'undefined') {
-      (window as any).__SUBCHECK_LICENSE__ = {
+      (window as Record<string, unknown>).__SUBCHECK_LICENSE__ = {
         name: 'Business Source License 1.1',
         version: '1.0.0',
         contact: 'licensing@subcheck.app',
