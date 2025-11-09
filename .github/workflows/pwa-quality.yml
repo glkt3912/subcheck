@@ -1,0 +1,348 @@
+name: PWA Quality Check
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # 毎日午前2時（UTC）に実行して品質監視
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "18"
+
+jobs:
+  # Lighthouse PWA監査
+  lighthouse-pwa:
+    runs-on: ubuntu-latest
+    name: Lighthouse PWA Audit
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_COMMERCIAL_SERVICE: false
+
+      - name: Start application
+        run: |
+          npm run start &
+          echo $! > app.pid
+          sleep 15
+        env:
+          NODE_ENV: production
+          PORT: 3000
+
+      - name: Wait for application startup
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:3000; do sleep 2; done'
+
+      - name: Install Lighthouse CLI
+        run: npm install -g @lhci/cli lighthouse
+
+      - name: Run Lighthouse PWA audit
+        run: |
+          lighthouse http://localhost:3000 \
+            --only-categories=pwa \
+            --output=json \
+            --output-path=lighthouse-pwa-report.json \
+            --chrome-flags="--headless --no-sandbox --disable-gpu"
+
+      - name: Analyze PWA score
+        run: |
+          PWA_SCORE=$(cat lighthouse-pwa-report.json | jq '.categories.pwa.score * 100')
+          echo "PWA Score: $PWA_SCORE"
+
+          if (( $(echo "$PWA_SCORE < 90" | bc -l) )); then
+            echo "❌ PWA score ($PWA_SCORE) is below threshold (90)"
+            exit 1
+          else
+            echo "✅ PWA score ($PWA_SCORE) meets quality standards"
+          fi
+
+      - name: Upload Lighthouse report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-pwa-report
+          path: lighthouse-pwa-report.json
+          retention-days: 30
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+            rm app.pid
+          fi
+
+  # PWAマニフェスト検証
+  manifest-validation:
+    runs-on: ubuntu-latest
+    name: PWA Manifest Validation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install PWA validation tools
+        run: npm install -g pwa-asset-generator
+
+      - name: Validate manifest.json structure
+        run: |
+          if [ ! -f "public/manifest.json" ]; then
+            echo "❌ manifest.json not found"
+            exit 1
+          fi
+
+          # JSONが有効かチェック
+          cat public/manifest.json | jq . > /dev/null
+          echo "✅ Valid JSON structure"
+
+      - name: Check required manifest fields
+        run: |
+          MANIFEST="public/manifest.json"
+
+          # 必須フィールドのチェック
+          REQUIRED_FIELDS=("name" "short_name" "start_url" "display" "theme_color" "background_color" "icons")
+
+          for field in "${REQUIRED_FIELDS[@]}"; do
+            if ! cat $MANIFEST | jq -e ".$field" > /dev/null; then
+              echo "❌ Required field missing: $field"
+              exit 1
+            else
+              echo "✅ $field: present"
+            fi
+          done
+
+      - name: Validate manifest icons
+        run: |
+          ICON_COUNT=$(cat public/manifest.json | jq '.icons | length')
+          echo "Found $ICON_COUNT icons in manifest"
+
+          if [ "$ICON_COUNT" -lt 2 ]; then
+            echo "❌ Insufficient icons (need at least 2 sizes)"
+            exit 1
+          fi
+
+          # 512x512 アイコンの確認
+          HAS_512=$(cat public/manifest.json | jq '.icons[] | select(.sizes == "512x512")' | wc -l)
+          if [ "$HAS_512" -eq 0 ]; then
+            echo "❌ Missing 512x512 icon"
+            exit 1
+          fi
+
+          echo "✅ Icon validation passed"
+
+  # Service Worker検証
+  service-worker-validation:
+    runs-on: ubuntu-latest
+    name: Service Worker Validation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Start application
+        run: |
+          npm run start &
+          echo $! > app.pid
+          sleep 10
+        env:
+          NODE_ENV: production
+          PORT: 3000
+
+      - name: Validate Service Worker availability
+        run: |
+          # Service Workerファイルが存在するかチェック
+          if [ ! -f "public/sw.js" ]; then
+            echo "❌ Service Worker file not found"
+            exit 1
+          fi
+
+          # Service Workerがアクセス可能かチェック
+          HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" http://localhost:3000/sw.js)
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Service Worker not accessible (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+          echo "✅ Service Worker validation passed"
+
+      - name: Check Service Worker registration
+        run: |
+          # Service Worker登録スクリプトの存在確認
+          if ! grep -r "serviceWorker" components/ app/ --include="*.tsx" --include="*.ts"; then
+            echo "❌ Service Worker registration code not found"
+            exit 1
+          fi
+
+          echo "✅ Service Worker registration code found"
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+            rm app.pid
+          fi
+
+  # オフライン機能テスト
+  offline-functionality:
+    runs-on: ubuntu-latest
+    name: Offline Functionality Test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Puppeteer
+        run: npm install -g puppeteer
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Start application
+        run: |
+          npm run start &
+          echo $! > app.pid
+          sleep 10
+        env:
+          NODE_ENV: production
+          PORT: 3000
+
+      - name: Test offline page accessibility
+        run: |
+          # オフラインページが存在するかチェック
+          HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" http://localhost:3000/offline)
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Offline page not accessible (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+          echo "✅ Offline page accessible"
+
+      - name: Validate offline hooks implementation
+        run: |
+          # オフライン機能のHooksファイルチェック
+          if [ ! -f "lib/hooks/useOfflineSync.ts" ]; then
+            echo "❌ Offline sync hook not found"
+            exit 1
+          fi
+
+          # オフライン状態管理の確認
+          if ! grep -q "navigator.onLine" lib/hooks/useOfflineSync.ts; then
+            echo "❌ Online/offline detection not implemented"
+            exit 1
+          fi
+
+          echo "✅ Offline functionality hooks validated"
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+            rm app.pid
+          fi
+
+  # PWA品質レポート生成
+  generate-pwa-report:
+    runs-on: ubuntu-latest
+    name: PWA Quality Report
+    needs:
+      [
+        lighthouse-pwa,
+        manifest-validation,
+        service-worker-validation,
+        offline-functionality,
+      ]
+    if: always()
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: lighthouse-pwa-report
+          path: reports/
+
+      - name: Generate quality report
+        run: |
+          mkdir -p reports
+
+          cat > reports/pwa-quality-summary.md << 'EOF'
+          # PWA Quality Report
+
+          Generated: $(date)
+          Commit: ${{ github.sha }}
+          Branch: ${{ github.ref }}
+
+          ## Quality Checks Status
+
+          - **Lighthouse PWA**: ${{ needs.lighthouse-pwa.result }}
+          - **Manifest Validation**: ${{ needs.manifest-validation.result }}
+          - **Service Worker**: ${{ needs.service-worker-validation.result }}
+          - **Offline Functionality**: ${{ needs.offline-functionality.result }}
+
+          ## Next Steps
+
+          - Review any failed checks above
+          - Check Lighthouse report for detailed recommendations
+          - Ensure PWA score remains above 90
+
+          EOF
+
+      - name: Upload PWA quality report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pwa-quality-report
+          path: reports/
+          retention-days: 90

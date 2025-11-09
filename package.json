@@ -34,7 +34,8 @@
     "build:production": "NODE_ENV=production npm run build",
     "lighthouse": "lighthouse http://localhost:3000 --view --output html --output-path ./lighthouse-report.html",
     "pwa:validate": "lighthouse http://localhost:3000 --only-categories=pwa --view",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "license-check": "node scripts/license-check.mjs"
   },
   "engines": {
     "node": ">=18.0.0",

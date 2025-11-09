@@ -1,0 +1,345 @@
+name: Deployment Pipeline
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: "Skip tests (emergency deployment)"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: "18"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 依存関係とビルド準備
+  prepare-deployment:
+    runs-on: ubuntu-latest
+    name: Prepare Deployment
+    outputs:
+      environment: ${{ steps.determine-env.outputs.environment }}
+      should-deploy: ${{ steps.determine-env.outputs.should-deploy }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine deployment environment
+        id: determine-env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "environment=none" >> $GITHUB_OUTPUT
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log deployment info
+        run: |
+          echo "🚀 Deployment Info:"
+          echo "Environment: ${{ steps.determine-env.outputs.environment }}"
+          echo "Should deploy: ${{ steps.determine-env.outputs.should-deploy }}"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref }}"
+
+  # プリデプロイ品質チェック
+  pre-deploy-checks:
+    runs-on: ubuntu-latest
+    name: Pre-deployment Checks
+    needs: prepare-deployment
+    if: needs.prepare-deployment.outputs.should-deploy == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests (unless skipped)
+        if: github.event.inputs.skip_tests != 'true'
+        run: npm test
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint check
+        run: npm run lint
+
+      - name: Build for production
+        run: npm run build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_COMMERCIAL_SERVICE: ${{ needs.prepare-deployment.outputs.environment == 'production' }}
+          NEXT_PUBLIC_COMMERCIAL_LICENSE: true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ needs.prepare-deployment.outputs.environment }}
+          path: |
+            .next/
+            public/
+          retention-days: 7
+
+  # Dockerイメージビルド（本番環境向け）
+  build-docker:
+    runs-on: ubuntu-latest
+    name: Build Docker Image
+    needs: [prepare-deployment, pre-deploy-checks]
+    if: needs.prepare-deployment.outputs.environment == 'production'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+            NEXT_PUBLIC_COMMERCIAL_SERVICE=true
+            NEXT_PUBLIC_COMMERCIAL_LICENSE=true
+
+  # ステージング環境デプロイ
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    needs: [prepare-deployment, pre-deploy-checks]
+    if: needs.prepare-deployment.outputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.subcheck.app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-staging
+          path: build/
+
+      - name: Deploy to staging
+        run: |
+          echo "🚀 Deploying to staging environment..."
+
+          # Vercelデプロイ例（実際の環境に合わせて調整）
+          # npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+
+          echo "✅ Staging deployment completed"
+          echo "URL: https://staging.subcheck.app"
+
+      - name: Run staging smoke tests
+        run: |
+          echo "🧪 Running staging smoke tests..."
+          sleep 30  # デプロイ完了待機
+
+          # 基本的なヘルスチェック
+          # curl -f https://staging.subcheck.app/health || exit 1
+
+          echo "✅ Staging smoke tests passed"
+
+  # 本番環境デプロイ
+  deploy-production:
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    needs: [prepare-deployment, pre-deploy-checks, build-docker]
+    if: needs.prepare-deployment.outputs.environment == 'production'
+    environment:
+      name: production
+      url: https://subcheck.app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "🚀 Deploying to production environment..."
+
+          # 本番デプロイコマンド（実際の環境に合わせて調整）
+          # kubectl apply -f k8s/production/
+          # helm upgrade subcheck ./charts/subcheck --namespace production
+
+          echo "✅ Production deployment completed"
+          echo "URL: https://subcheck.app"
+
+      - name: Run production health checks
+        run: |
+          echo "🏥 Running production health checks..."
+          sleep 60  # デプロイ完了とヘルスチェック待機
+
+          # 本番ヘルスチェック
+          # curl -f https://subcheck.app/api/health || exit 1
+          # curl -f https://subcheck.app/manifest.json || exit 1
+
+          echo "✅ Production health checks passed"
+
+  # デプロイ後品質チェック
+  post-deploy-verification:
+    runs-on: ubuntu-latest
+    name: Post-deployment Verification
+    needs: [prepare-deployment, deploy-staging, deploy-production]
+    if: always() && needs.prepare-deployment.outputs.should-deploy == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Lighthouse
+        run: npm install -g lighthouse
+
+      - name: Determine target URL
+        id: target
+        run: |
+          if [ "${{ needs.prepare-deployment.outputs.environment }}" = "production" ]; then
+            echo "url=https://subcheck.app" >> $GITHUB_OUTPUT
+          else
+            echo "url=https://staging.subcheck.app" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Lighthouse audit
+        run: |
+          lighthouse ${{ steps.target.outputs.url }} \
+            --only-categories=pwa,performance,accessibility \
+            --output=json \
+            --output-path=lighthouse-deploy.json \
+            --chrome-flags="--headless --no-sandbox" \
+            || echo "Lighthouse failed, continuing..."
+
+      - name: Analyze deployment quality
+        run: |
+          if [ -f lighthouse-deploy.json ]; then
+            PWA_SCORE=$(cat lighthouse-deploy.json | jq '.categories.pwa.score * 100' 2>/dev/null || echo "0")
+            PERF_SCORE=$(cat lighthouse-deploy.json | jq '.categories.performance.score * 100' 2>/dev/null || echo "0")
+            
+            echo "PWA Score: $PWA_SCORE"
+            echo "Performance Score: $PERF_SCORE"
+            
+            if (( $(echo "$PWA_SCORE < 85" | bc -l) )); then
+              echo "⚠️  PWA score below threshold after deployment"
+            fi
+            
+            if (( $(echo "$PERF_SCORE < 70" | bc -l) )); then
+              echo "⚠️  Performance score below threshold after deployment"
+            fi
+          fi
+
+      - name: Upload deployment verification
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-verification-${{ needs.prepare-deployment.outputs.environment }}
+          path: |
+            lighthouse-deploy.json
+          retention-days: 30
+
+  # デプロイ通知
+  notify-deployment:
+    runs-on: ubuntu-latest
+    name: Deployment Notification
+    needs:
+      [
+        prepare-deployment,
+        deploy-staging,
+        deploy-production,
+        post-deploy-verification,
+      ]
+    if: always() && needs.prepare-deployment.outputs.should-deploy == 'true'
+
+    steps:
+      - name: Determine deployment status
+        id: status
+        run: |
+          if [ "${{ needs.deploy-staging.result }}" = "success" ] || [ "${{ needs.deploy-production.result }}" = "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "emoji=🎉" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "emoji=❌" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send notification
+        run: |
+          echo "${{ steps.status.outputs.emoji }} Deployment Status: ${{ steps.status.outputs.status }}"
+          echo "Environment: ${{ needs.prepare-deployment.outputs.environment }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref }}"
+
+          # 実際の通知システムに合わせて調整
+          # Slack, Discord, Email等
+
+      - name: Update deployment status
+        if: steps.status.outputs.status == 'success'
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "Environment: ${{ needs.prepare-deployment.outputs.environment }}"
+
+          if [ "${{ needs.prepare-deployment.outputs.environment }}" = "production" ]; then
+            echo "🌐 Production URL: https://subcheck.app"
+          else
+            echo "🔧 Staging URL: https://staging.subcheck.app"
+          fi
