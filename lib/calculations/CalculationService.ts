@@ -6,10 +6,10 @@ import { SUBSCRIPTION_DATA } from '@/lib/data/subscriptions';
 
 // Frequency multipliers based on actual usage vs paid amount  
 const FREQUENCY_MULTIPLIERS: Record<string, number> = {
-  daily: 0.0,      // No waste - getting full value
-  weekly: 0.25,    // 25% waste
-  monthly: 0.6,    // 60% waste
-  unused: 1.0      // 100% waste
+  daily: 0.0,      // No waste - getting full value (毎日使用)
+  weekly: 0.15,    // 15% waste (週1-2回使用)
+  monthly: 0.35,   // 35% waste (月1-2回使用) - 修正：より現実的な値
+  unused: 1.0      // 100% waste (未使用)
 };
 
 // Comparison examples for waste visualization
@@ -171,8 +171,8 @@ function generateRecommendations(userSubscriptions: UserSubscription[], subscrip
             action: 'review',
             reason: '使用頻度が少ないため、本当に必要か検討してみてください。',
             potentialSaving: {
-              monthly: Math.round(price * 0.6),
-              yearly: Math.round(price * 0.6 * 12)
+              monthly: Math.round(price * 0.35), // 修正：35%の無駄率に合わせる
+              yearly: Math.round(price * 0.35 * 12)
             },
             priority: 'medium'
           });
@@ -186,8 +186,8 @@ function generateRecommendations(userSubscriptions: UserSubscription[], subscrip
             action: 'downgrade',
             reason: '使用頻度に対して料金が高めです。より安いプランがないか確認してみてください。',
             potentialSaving: {
-              monthly: Math.round(price * 0.3),
-              yearly: Math.round(price * 0.3 * 12)
+              monthly: Math.round(price * 0.15), // 修正：15%の無駄率に合わせる
+              yearly: Math.round(price * 0.15 * 12)
             },
             priority: 'low'
           });
