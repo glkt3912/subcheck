@@ -1,20 +1,24 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { LoadingState } from '@/components/ui/LoadingSpinner';
-import WasteChart from '@/components/charts/WasteChart';
-import ResultsSummary from '@/components/shared/ResultsSummary';
-import SocialShareButtons from '@/components/shared/SocialShareButtons';
-import AlertsContainer from '@/components/shared/AlertsContainer';
-import { useDiagnosisSession } from '@/lib/hooks/useDiagnosisSession';
-import { SubscriptionService } from '@/lib/services/SubscriptionService';
-import { calculateDiagnosis } from '@/lib/calculations/CalculationService';
-import { saveDiagnosisResult, getDiagnosisHistory } from '@/lib/storage/StorageService';
-import { AlertService } from '@/lib/services/AlertService';
-import { Subscription, AlertNotification } from '@/types';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { LoadingState } from "@/components/ui/LoadingSpinner";
+import WasteChart from "@/components/charts/WasteChart";
+import ResultsSummary from "@/components/shared/ResultsSummary";
+import SocialShareButtons from "@/components/shared/SocialShareButtons";
+import AlertsContainer from "@/components/shared/AlertsContainer";
+import { useDiagnosisSession } from "@/lib/hooks/useDiagnosisSession";
+import { useOfflineSync } from "@/lib/hooks/useOfflineSync";
+import { SubscriptionService } from "@/lib/services/SubscriptionService";
+import { calculateDiagnosis } from "@/lib/calculations/CalculationService";
+import {
+  saveDiagnosisResult,
+  getDiagnosisHistory,
+} from "@/lib/storage/StorageService";
+import { AlertService } from "@/lib/services/AlertService";
+import { Subscription, AlertNotification } from "@/types";
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -23,14 +27,19 @@ export default function ResultsPage() {
     diagnosisResult,
     calculateResults,
     clearSession,
-    isLoading
+    isLoading,
   } = useDiagnosisSession();
-  
-  const [subscriptionDetails, setSubscriptionDetails] = useState<Record<string, Subscription>>({});
+
+  const { isOnline, queueForSync } = useOfflineSync();
+
+  const [subscriptionDetails, setSubscriptionDetails] = useState<
+    Record<string, Subscription>
+  >({});
   const [servicesLoading, setServicesLoading] = useState(true);
-  const [localDiagnosisResult, setLocalDiagnosisResult] = useState(diagnosisResult);
+  const [localDiagnosisResult, setLocalDiagnosisResult] =
+    useState(diagnosisResult);
   const [alerts, setAlerts] = useState<AlertNotification[]>([]);
-  
+
   // Sync local state with hook state
   useEffect(() => {
     setLocalDiagnosisResult(diagnosisResult);
@@ -39,7 +48,7 @@ export default function ResultsPage() {
   useEffect(() => {
     // Redirect if no user subscriptions
     if (!isLoading && userSubscriptions.length === 0) {
-      router.push('/diagnosis/select');
+      router.push("/diagnosis/select");
       return;
     }
 
@@ -49,55 +58,75 @@ export default function ResultsPage() {
         const subscriptionService = new SubscriptionService();
         const services = await subscriptionService.getAllSubscriptions();
         const details: Record<string, Subscription> = {};
-        services.forEach(sub => {
+        services.forEach((sub) => {
           details[sub.id] = sub;
         });
         setSubscriptionDetails(details);
 
         // Calculate diagnosis if we have subscriptions but no result yet
         // OR if the result doesn't match current subscriptions
-        const shouldRecalculate = userSubscriptions.length > 0 && (
-          !diagnosisResult || 
-          diagnosisResult.subscriptions.length !== userSubscriptions.length ||
-          !diagnosisResult.subscriptions.every(resultSub => 
-            userSubscriptions.some(userSub => 
-              userSub.subscriptionId === resultSub.subscriptionId &&
-              userSub.usageFrequency === resultSub.usageFrequency
-            )
-          )
-        );
-        
+        const shouldRecalculate =
+          userSubscriptions.length > 0 &&
+          (!diagnosisResult ||
+            diagnosisResult.subscriptions.length !== userSubscriptions.length ||
+            !diagnosisResult.subscriptions.every((resultSub) =>
+              userSubscriptions.some(
+                (userSub) =>
+                  userSub.subscriptionId === resultSub.subscriptionId &&
+                  userSub.usageFrequency === resultSub.usageFrequency
+              )
+            ));
+
         if (shouldRecalculate) {
           // Recalculate with all available subscriptions (including custom)
           const result = calculateDiagnosis(userSubscriptions, services);
           setLocalDiagnosisResult(result);
           saveDiagnosisResult(result);
-          
+
+          // Queue for sync when offline
+          if (!isOnline) {
+            queueForSync(result);
+          }
+
           // Generate alerts based on the new result
           const history = getDiagnosisHistory();
           const previousResult = history.length > 1 ? history[1] : undefined;
-          const generatedAlerts = AlertService.generateAlerts(result, previousResult);
+          const generatedAlerts = AlertService.generateAlerts(
+            result,
+            previousResult
+          );
           setAlerts(generatedAlerts);
         } else if (diagnosisResult) {
           // Generate alerts for existing result
           const history = getDiagnosisHistory();
           const previousResult = history.length > 1 ? history[1] : undefined;
-          const generatedAlerts = AlertService.generateAlerts(diagnosisResult, previousResult);
+          const generatedAlerts = AlertService.generateAlerts(
+            diagnosisResult,
+            previousResult
+          );
           setAlerts(generatedAlerts);
         }
       } catch (error) {
-        console.error('Failed to load data:', error);
+        console.error("Failed to load data:", error);
       } finally {
         setServicesLoading(false);
       }
     };
 
     loadData();
-  }, [isLoading, userSubscriptions, diagnosisResult, calculateResults, router]);
+  }, [
+    isLoading,
+    userSubscriptions,
+    diagnosisResult,
+    calculateResults,
+    router,
+    isOnline,
+    queueForSync,
+  ]);
 
   const handleRestart = () => {
     clearSession();
-    router.push('/diagnosis/select');
+    router.push("/diagnosis/select");
   };
 
   const [showShareButtons, setShowShareButtons] = useState(false);
@@ -118,8 +147,10 @@ export default function ResultsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">診断結果の計算に失敗しました</h2>
-          <Button onClick={() => router.push('/diagnosis/select')}>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            診断結果の計算に失敗しました
+          </h2>
+          <Button onClick={() => router.push("/diagnosis/select")}>
             最初からやり直す
           </Button>
         </div>
@@ -137,10 +168,7 @@ export default function ResultsPage() {
               <div className="text-xl font-bold text-blue-600">💳</div>
               <span className="text-lg font-bold text-gray-900">SubCheck</span>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => router.push('/')}
-            >
+            <Button variant="outline" onClick={() => router.push("/")}>
               ホームに戻る
             </Button>
           </div>
@@ -151,7 +179,9 @@ export default function ResultsPage() {
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">ステップ 3/3</span>
+            <span className="text-sm font-medium text-gray-700">
+              ステップ 3/3
+            </span>
             <span className="text-sm text-gray-500">診断結果</span>
           </div>
           <Progress value={100} className="h-2" />
@@ -173,7 +203,7 @@ export default function ResultsPage() {
           {/* Alerts Section */}
           {alerts.length > 0 && (
             <div className="mb-8">
-              <AlertsContainer 
+              <AlertsContainer
                 alerts={alerts}
                 displayMode="banner"
                 maxVisible={3}
