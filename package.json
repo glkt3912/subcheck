@@ -1,6 +1,26 @@
 {
-  "name": "webapp",
-  "version": "0.1.0",
+  "name": "subcheck-pwa",
+  "version": "1.0.0",
+  "description": "SubCheck - サブスクリプション無駄率診断PWA",
+  "author": "SubCheck Development Team",
+  "license": "BSL-1.1",
+  "keywords": [
+    "pwa",
+    "subscription",
+    "diagnosis",
+    "fintech",
+    "offline-first",
+    "react",
+    "nextjs"
+  ],
+  "homepage": "https://subcheck.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/subcheck/subcheck-pwa.git"
+  },
+  "bugs": {
+    "url": "https://github.com/subcheck/subcheck-pwa/issues"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,7 +32,13 @@
     "test:watch": "vitest --watch",
     "analyze": "ANALYZE=true npm run build",
     "build:production": "NODE_ENV=production npm run build",
-    "lighthouse": "lighthouse http://localhost:3000 --view --output html --output-path ./lighthouse-report.html"
+    "lighthouse": "lighthouse http://localhost:3000 --view --output html --output-path ./lighthouse-report.html",
+    "pwa:validate": "lighthouse http://localhost:3000 --only-categories=pwa --view",
+    "type-check": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "dependencies": {
     "@radix-ui/react-progress": "^1.1.7",
@@ -45,5 +71,23 @@
     "typescript": "^5",
     "vitest": "^4.0.5",
     "vitest-localstorage-mock": "^0.1.2"
+  },
+  "browserslist": [
+    "> 0.5%",
+    "last 2 versions",
+    "Firefox ESR",
+    "not dead",
+    "not IE 11"
+  ],
+  "pwa": {
+    "name": "SubCheck",
+    "short_name": "SubCheck", 
+    "description": "サブスクリプション無駄率診断アプリ",
+    "theme_color": "#2563eb",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "start_url": "/"
   }
 }

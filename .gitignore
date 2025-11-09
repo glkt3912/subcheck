@@ -41,3 +41,8 @@ yarn-error.log*
 next-env.d.ts
 # IDE files
 \.vscode/
+
+# Documentation - Private Business Information
+docs/private/
+
+# Public documentation (docs/public/) is included in repository
