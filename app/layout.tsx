@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
@@ -18,8 +18,7 @@ export const metadata: Metadata = {
   title: "SubCheck - サブスク無駄率診断",
   description: "あなたのサブスクリプション、本当に使ってる？無駄な支出を可視化して、賢い節約を始めよう。",
   keywords: ["サブスクリプション", "診断", "節約", "無駄", "月額", "見直し"],
-  manifest: "/manifest.json",
-  themeColor: "#2563eb",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -45,6 +44,15 @@ export const metadata: Metadata = {
   verification: {
     google: 'verification-token-here',
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#2563eb",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
