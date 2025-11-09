@@ -124,11 +124,11 @@ jobs:
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: build-output
           path: |
             .next/
-            out/
           retention-days: 7
 
   # PWAビルド検証
@@ -165,7 +165,7 @@ jobs:
 
       - name: Validate PWA manifest
         run: |
-          curl -f http://localhost:3000/manifest.json > /dev/null || exit 1
+          curl -f http://localhost:3000/manifest.webmanifest > /dev/null || exit 1
           echo "Manifest validation passed"
 
       - name: Validate Service Worker

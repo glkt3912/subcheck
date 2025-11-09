@@ -234,7 +234,7 @@ describe('Background Sync', () => {
   it('should register background sync when available', async () => {
     const backgroundSyncRegistration = {
       sync: {
-        register: vi.fn((tag: string) => Promise.resolve())
+        register: vi.fn((_tag: string) => Promise.resolve())
       }
     };
 
