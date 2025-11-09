@@ -6,10 +6,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
+// オフラインデータの型定義
+interface OfflineData {
+  id: string;
+  timestamp: number;
+  data: unknown;
+  synced: boolean;
+}
+
 // useOfflineSync Hookのモック
 const mockUseOfflineSync = {
   isOnline: true,
-  pendingSync: [],
+  pendingSync: [] as OfflineData[],
   queueForSync: vi.fn(),
   syncPendingData: vi.fn(),
   clearSyncQueue: vi.fn()
@@ -27,22 +35,23 @@ Object.defineProperty(navigator, 'onLine', {
 });
 
 // Service Worker のモック
+const mockServiceWorkerRegistration = {
+  installing: null,
+  waiting: null,
+  active: {
+    scriptURL: '/sw.js'
+  },
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  sync: {
+    register: vi.fn(() => Promise.resolve())
+  }
+};
+
 Object.defineProperty(navigator, 'serviceWorker', {
   value: {
-    register: vi.fn(() => Promise.resolve({
-      installing: null,
-      waiting: null,
-      active: {
-        scriptURL: '/sw.js'
-      },
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn()
-    })),
-    ready: Promise.resolve({
-      sync: {
-        register: vi.fn(() => Promise.resolve())
-      }
-    } as ServiceWorkerRegistration & { sync: { register: (tag: string) => Promise<void> } })
+    register: vi.fn(() => Promise.resolve(mockServiceWorkerRegistration)),
+    ready: Promise.resolve(mockServiceWorkerRegistration)
   },
   writable: true,
   configurable: true
@@ -111,7 +120,7 @@ describe('Data Queuing for Offline Sync', () => {
     };
 
     // オフライン時のデータキューイング
-    mockUseOfflineSync.queueForSync.mockImplementation((data) => {
+    mockUseOfflineSync.queueForSync.mockImplementation((data: unknown) => {
       const queueItem = {
         id: `diagnosis-${Date.now()}`,
         timestamp: Date.now(),
@@ -137,7 +146,7 @@ describe('Data Queuing for Offline Sync', () => {
       { type: 'usage', data: { frequency: 'daily' } }
     ];
 
-    mockUseOfflineSync.queueForSync.mockImplementation((data) => {
+    mockUseOfflineSync.queueForSync.mockImplementation((data: unknown) => {
       const queueItem = {
         id: `operation-${mockUseOfflineSync.pendingSync.length + 1}`,
         timestamp: Date.now(),
@@ -223,20 +232,16 @@ describe('Background Sync', () => {
   });
 
   it('should register background sync when available', async () => {
-    const mockRegistration = {
+    const backgroundSyncRegistration = {
       sync: {
-        register: vi.fn(() => Promise.resolve())
+        register: vi.fn((tag: string) => Promise.resolve())
       }
     };
 
-    // Service Worker registrationの設定
-    navigator.serviceWorker.ready = Promise.resolve(mockRegistration as ServiceWorkerRegistration & { sync: { register: (tag: string) => Promise<void> } });
-
     // バックグラウンド同期の登録
-    const registration = await navigator.serviceWorker.ready;
-    await registration.sync.register('diagnosis-sync');
+    await backgroundSyncRegistration.sync.register('diagnosis-sync');
 
-    expect(mockRegistration.sync.register).toHaveBeenCalledWith('diagnosis-sync');
+    expect(backgroundSyncRegistration.sync.register).toHaveBeenCalledWith('diagnosis-sync');
   });
 });
 

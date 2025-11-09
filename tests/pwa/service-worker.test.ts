@@ -39,28 +39,44 @@ describe('Service Worker Core Functionality', () => {
     vi.clearAllMocks();
     
     // Cache API のモック
-    global.caches = {
-      open: vi.fn(() => Promise.resolve({
-        put: vi.fn(),
-        match: vi.fn(),
-        delete: vi.fn(),
-        keys: vi.fn(() => Promise.resolve([])),
-        addAll: vi.fn()
-      })),
+    const mockCache = {
+      put: vi.fn(),
       match: vi.fn(),
       delete: vi.fn(),
-      keys: vi.fn(() => Promise.resolve(['cache-v1', 'cache-v2']))
+      keys: vi.fn(() => Promise.resolve([])),
+      addAll: vi.fn(),
+      add: vi.fn(),
+      matchAll: vi.fn(() => Promise.resolve([]))
+    };
+    
+    global.caches = {
+      open: vi.fn(() => Promise.resolve(mockCache)),
+      match: vi.fn(),
+      delete: vi.fn(),
+      keys: vi.fn(() => Promise.resolve(['cache-v1', 'cache-v2'])),
+      has: vi.fn()
     };
 
     // Fetch APIのモック
-    global.fetch = vi.fn(() => Promise.resolve({
+    const mockResponse = {
       ok: true,
       status: 200,
-      clone: () => ({
-        ok: true,
-        status: 200
-      })
-    })) as typeof fetch;
+      statusText: 'OK',
+      headers: new Headers(),
+      redirected: false,
+      type: 'basic' as ResponseType,
+      url: 'http://localhost:3000',
+      clone: vi.fn(() => mockResponse),
+      arrayBuffer: vi.fn(),
+      blob: vi.fn(),
+      formData: vi.fn(),
+      json: vi.fn(),
+      text: vi.fn(),
+      body: null,
+      bodyUsed: false
+    };
+    
+    global.fetch = vi.fn(() => Promise.resolve(mockResponse as unknown as Response));
   });
 
   afterEach(() => {
@@ -85,11 +101,17 @@ describe('Service Worker Core Functionality', () => {
         '/diagnosis/select'
       ];
 
-      const mockCache = {
-        addAll: vi.fn(() => Promise.resolve())
+      const installMockCache = {
+        addAll: vi.fn(() => Promise.resolve()),
+        put: vi.fn(),
+        match: vi.fn(),
+        delete: vi.fn(),
+        keys: vi.fn(() => Promise.resolve([])),
+        add: vi.fn(),
+        matchAll: vi.fn(() => Promise.resolve([]))
       };
 
-      global.caches.open = vi.fn(() => Promise.resolve(mockCache));
+      global.caches.open = vi.fn(() => Promise.resolve(installMockCache));
 
       // インストール処理を実行
       const installPromise = Promise.resolve().then(async () => {
@@ -102,7 +124,7 @@ describe('Service Worker Core Functionality', () => {
       await installPromise;
 
       expect(global.caches.open).toHaveBeenCalledWith('subcheck-static-v1');
-      expect(mockCache.addAll).toHaveBeenCalledWith(staticAssets);
+      expect(installMockCache.addAll).toHaveBeenCalledWith(staticAssets);
     });
 
     it('should skip waiting when new service worker installs', () => {
@@ -349,7 +371,7 @@ describe('Service Worker Core Functionality', () => {
       const request = new Request('http://localhost:3000/failing-endpoint');
       
       global.fetch = vi.fn(() => Promise.reject(new Error('Network error')));
-      global.caches.match = vi.fn(() => Promise.resolve(null));
+      global.caches.match = vi.fn(() => Promise.resolve(undefined));
 
       // エラーハンドリングのテスト
       const response = await (async () => {
@@ -403,23 +425,26 @@ describe('Service Worker Core Functionality', () => {
 
 describe('PWA Manifest Integration', () => {
   it('should validate manifest.json accessibility', async () => {
-    global.fetch = vi.fn(() => Promise.resolve({
+    const mockManifest = {
+      name: 'SubCheck',
+      short_name: 'SubCheck',
+      start_url: '/',
+      display: 'standalone',
+      theme_color: '#2563eb',
+      background_color: '#ffffff'
+    };
+    
+    const manifestMockResponse = {
       ok: true,
-      status: 200,
-      json: () => Promise.resolve({
-        name: 'SubCheck',
-        short_name: 'SubCheck',
-        start_url: '/',
-        display: 'standalone',
-        theme_color: '#2563eb',
-        background_color: '#ffffff'
-      })
-    }));
+      json: () => Promise.resolve(mockManifest)
+    } as Response;
+    
+    global.fetch = vi.fn(() => Promise.resolve(manifestMockResponse));
 
-    const manifestResponse = await fetch('/manifest.json');
-    const manifest = await manifestResponse.json();
+    const response = await fetch('/manifest.json');
+    const manifest = await response.json();
 
-    expect(manifestResponse.ok).toBe(true);
+    expect(response.ok).toBe(true);
     expect(manifest.name).toBe('SubCheck');
     expect(manifest.display).toBe('standalone');
   });

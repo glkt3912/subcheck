@@ -90,5 +90,8 @@
     "orientation": "portrait-primary",
     "scope": "/",
     "start_url": "/"
+  },
+  "overrides": {
+    "@img/sharp-*": "npm:@img/sharp-wasm32@latest"
   }
 }

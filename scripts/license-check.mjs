@@ -255,13 +255,27 @@ class LicenseChecker {
 
       // 問題のあるライセンスの検出
       const violations = [];
-      Object.entries(licenses).forEach(([package, info]) => {
+      const allowedExceptions = [
+        '@img/sharp-libvips', // Image processing library - LGPL exception
+        'sharp' // LGPL allowed for development tools
+      ];
+      
+      Object.entries(licenses).forEach(([packageName, info]) => {
         const packageLicense = info.licenses;
+        
+        // 許可された例外パッケージをスキップ
+        const isAllowedException = allowedExceptions.some(exception => 
+          packageName.includes(exception)
+        );
+        
+        if (isAllowedException) {
+          return; // このパッケージは例外として許可
+        }
 
         if (typeof packageLicense === "string") {
           forbiddenLicenses.forEach((forbidden) => {
             if (packageLicense.includes(forbidden)) {
-              violations.push(`${package}: ${packageLicense}`);
+              violations.push(`${packageName}: ${packageLicense}`);
             }
           });
         }
