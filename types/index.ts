@@ -6,6 +6,9 @@ export * from './subscription';
 // Export all diagnosis-related types (depends on subscription types)
 export * from './diagnosis';
 
+// Export all alert-related types
+export * from './alert';
+
 // Explicit imports for internal use
 import type { UserSubscription } from './subscription';
 import type { DiagnosisResult } from './diagnosis';
