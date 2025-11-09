@@ -19,7 +19,7 @@ export default function LicenseNoticeClient() {
     
     // Add license info to global object for inspection
     if (typeof window !== 'undefined') {
-      (window as Record<string, unknown>).__SUBCHECK_LICENSE__ = {
+      const licenseInfo = {
         name: 'Business Source License 1.1',
         version: '1.0.0',
         contact: 'licensing@subcheck.app',
@@ -27,6 +27,14 @@ export default function LicenseNoticeClient() {
         changeDate: '2029-01-01',
         changeLicense: 'Apache License 2.0'
       };
+      
+      // Use Object.defineProperty for type-safe global assignment
+      Object.defineProperty(window, '__SUBCHECK_LICENSE__', {
+        value: licenseInfo,
+        writable: false,
+        enumerable: true,
+        configurable: false
+      });
     }
   }, []);
 
