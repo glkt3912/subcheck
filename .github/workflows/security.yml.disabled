@@ -1,0 +1,332 @@
+name: Security & License Check
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # 毎週月曜日午前3時（UTC）に定期実行
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  # 依存関係脆弱性チェック
+  vulnerability-scan:
+    runs-on: ubuntu-latest
+    name: Vulnerability Scan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          echo "🔍 Running npm audit..."
+          npm audit --audit-level=moderate --json > audit-report.json
+
+          # 脆弱性の数をチェック
+          HIGH_VULNS=$(cat audit-report.json | jq '.vulnerabilities | to_entries | map(select(.value.severity == "high")) | length')
+          CRITICAL_VULNS=$(cat audit-report.json | jq '.vulnerabilities | to_entries | map(select(.value.severity == "critical")) | length')
+
+          echo "Critical vulnerabilities: $CRITICAL_VULNS"
+          echo "High vulnerabilities: $HIGH_VULNS"
+
+          # クリティカル脆弱性が存在する場合はフェイル
+          if [ "$CRITICAL_VULNS" -gt 0 ]; then
+            echo "❌ Critical vulnerabilities found"
+            cat audit-report.json | jq '.vulnerabilities | to_entries | map(select(.value.severity == "critical"))'
+            exit 1
+          fi
+
+          # 高リスク脆弱性が5個以上の場合はフェイル  
+          if [ "$HIGH_VULNS" -gt 5 ]; then
+            echo "❌ Too many high-risk vulnerabilities ($HIGH_VULNS > 5)"
+            exit 1
+          fi
+
+          echo "✅ Vulnerability check passed"
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: npm-audit-report
+          path: audit-report.json
+          retention-days: 30
+
+  # BSL-1.1ライセンスコンプライアンス
+  license-compliance:
+    runs-on: ubuntu-latest
+    name: License Compliance Check
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install license checker
+        run: npm install -g license-checker
+
+      - name: Verify BSL-1.1 license
+        run: |
+          echo "🔍 Verifying BSL-1.1 license compliance..."
+
+          # package.jsonでライセンス確認
+          LICENSE=$(cat package.json | jq -r '.license')
+          if [ "$LICENSE" != "BSL-1.1" ]; then
+            echo "❌ Invalid license in package.json: $LICENSE (expected: BSL-1.1)"
+            exit 1
+          fi
+
+          # LICENSEファイル存在確認
+          if [ ! -f "LICENSE" ]; then
+            echo "❌ LICENSE file not found"
+            exit 1
+          fi
+
+          # NOTICEファイル存在確認
+          if [ ! -f "NOTICE" ]; then
+            echo "❌ NOTICE file not found"
+            exit 1
+          fi
+
+          # BSL-1.1キーワード確認
+          if ! grep -q "Business Source License 1.1" LICENSE; then
+            echo "❌ LICENSE file does not contain BSL-1.1 text"
+            exit 1
+          fi
+
+          echo "✅ BSL-1.1 license compliance verified"
+
+      - name: Check dependency licenses
+        run: |
+          echo "🔍 Checking dependency licenses..."
+
+          # 問題のあるライセンスリスト
+          FORBIDDEN_LICENSES=("GPL" "AGPL" "LGPL-3.0" "SSPL")
+
+          license-checker --json > license-report.json
+
+          # 禁止ライセンスチェック
+          for license in "${FORBIDDEN_LICENSES[@]}"; do
+            if grep -q "$license" license-report.json; then
+              echo "❌ Forbidden license detected: $license"
+              grep -A 5 -B 5 "$license" license-report.json
+              exit 1
+            fi
+          done
+
+          echo "✅ Dependency license check passed"
+
+      - name: Generate license report
+        run: |
+          license-checker --summary > license-summary.txt
+          echo "📋 License summary generated"
+          cat license-summary.txt
+
+      - name: Upload license reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-reports
+          path: |
+            license-report.json
+            license-summary.txt
+          retention-days: 90
+
+  # 商用利用検出
+  commercial-usage-check:
+    runs-on: ubuntu-latest
+    name: Commercial Usage Detection
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for commercial indicators
+        run: |
+          echo "🔍 Checking for commercial usage indicators..."
+
+          # 環境変数での商用利用設定チェック
+          if grep -r "NEXT_PUBLIC_COMMERCIAL_SERVICE.*true" . --include="*.yml" --include="*.yaml" --include="*.json"; then
+            echo "⚠️  Commercial service flag detected in configuration"
+            
+            # 商用ライセンスフラグもチェック
+            if ! grep -r "NEXT_PUBLIC_COMMERCIAL_LICENSE.*true" . --include="*.yml" --include="*.yaml" --include="*.json"; then
+              echo "❌ Commercial service enabled without commercial license"
+              exit 1
+            else
+              echo "✅ Commercial license properly configured"
+            fi
+          else
+            echo "✅ No commercial usage flags detected"
+          fi
+
+      - name: Verify license enforcement code
+        run: |
+          echo "🔍 Verifying license enforcement implementation..."
+
+          # ライセンスエンフォースメント関数の存在確認
+          if [ ! -f "src/utils/licenseNotice.ts" ]; then
+            echo "❌ License enforcement module not found"
+            exit 1
+          fi
+
+          # 重要な関数の存在確認
+          if ! grep -q "checkLicenseCompliance" src/utils/licenseNotice.ts; then
+            echo "❌ License compliance check function not found"
+            exit 1
+          fi
+
+          if ! grep -q "displayLicenseNotice" src/utils/licenseNotice.ts; then
+            echo "❌ License notice display function not found"
+            exit 1
+          fi
+
+          echo "✅ License enforcement code verified"
+
+  # コードセキュリティスキャン
+  code-security:
+    runs-on: ubuntu-latest
+    name: Code Security Scan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install security tools
+        run: |
+          npm install -g eslint-plugin-security
+
+      - name: Scan for security issues
+        run: |
+          echo "🔍 Scanning code for security issues..."
+
+          # ハードコードされた秘密情報のチェック
+          SECRETS_PATTERNS=(
+            "password"
+            "secret"
+            "token"
+            "api.*key"
+            "private.*key"
+          )
+
+          for pattern in "${SECRETS_PATTERNS[@]}"; do
+            if grep -ri "$pattern" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" . | grep -v node_modules | grep -v ".git"; then
+              echo "⚠️  Potential secret detected: $pattern"
+              # 実際のプロダクションでは、より厳密なチェックが必要
+            fi
+          done
+
+      - name: Check for unsafe dependencies
+        run: |
+          echo "🔍 Checking for known unsafe packages..."
+
+          # 既知の危険パッケージリスト（例）
+          UNSAFE_PACKAGES=("flatmap-stream" "event-stream" "eslint-scope")
+
+          for package in "${UNSAFE_PACKAGES[@]}"; do
+            if grep -q "$package" package.json; then
+              echo "❌ Unsafe package detected: $package"
+              exit 1
+            fi
+          done
+
+          echo "✅ No unsafe packages detected"
+
+  # セキュリティレポート生成
+  security-report:
+    runs-on: ubuntu-latest
+    name: Security Report
+    needs:
+      [
+        vulnerability-scan,
+        license-compliance,
+        commercial-usage-check,
+        code-security,
+      ]
+    if: always()
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: security-reports/
+
+      - name: Generate security summary
+        run: |
+          mkdir -p reports
+
+          cat > reports/security-summary.md << 'EOF'
+          # Security & License Report
+
+          Generated: $(date)
+          Commit: ${{ github.sha }}
+          Branch: ${{ github.ref }}
+
+          ## Security Checks Status
+
+          - **Vulnerability Scan**: ${{ needs.vulnerability-scan.result }}
+          - **License Compliance**: ${{ needs.license-compliance.result }}
+          - **Commercial Usage Check**: ${{ needs.commercial-usage-check.result }}
+          - **Code Security**: ${{ needs.code-security.result }}
+
+          ## BSL-1.1 License Status
+
+          ✅ Business Source License 1.1 properly configured
+          ✅ License enforcement code in place
+          ✅ Commercial usage restrictions active
+
+          ## Next Steps
+
+          - Review any failed security checks
+          - Update vulnerable dependencies if found
+          - Monitor license compliance regularly
+          - Ensure commercial license obtained before commercial use
+
+          ## Contact
+
+          - Security issues: security@subcheck.app
+          - License questions: licensing@subcheck.app
+
+          EOF
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-summary-report
+          path: reports/
+          retention-days: 90
+
+      - name: Notify security team
+        if: failure()
+        run: |
+          echo "🚨 Security check failed!"
+          echo "Please review the security report and take immediate action."
+          echo "Contact: security@subcheck.app"

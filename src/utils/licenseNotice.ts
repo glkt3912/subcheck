@@ -101,6 +101,32 @@ export function checkLicenseCompliance(): boolean {
 }
 
 /**
+ * 商用利用の検証
+ */
+export function isCommercialUsage(): boolean {
+  return process.env.NEXT_PUBLIC_COMMERCIAL_SERVICE === "true";
+}
+
+/**
+ * 商用利用の妥当性を検証
+ * @returns 商用利用が適切にライセンスされているか
+ */
+export function validateCommercialUsage(): boolean {
+  const isCommercial = isCommercialUsage();
+  const hasCommercialLicense =
+    process.env.NEXT_PUBLIC_COMMERCIAL_LICENSE === "true";
+
+  if (isCommercial && !hasCommercialLicense) {
+    console.error(
+      "🚨 COMMERCIAL LICENSE REQUIRED: Commercial usage detected without proper license"
+    );
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Get license status for display
  */
 export function getLicenseStatus() {
