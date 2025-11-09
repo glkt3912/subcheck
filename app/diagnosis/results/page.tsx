@@ -8,11 +8,13 @@ import { LoadingState } from '@/components/ui/LoadingSpinner';
 import WasteChart from '@/components/charts/WasteChart';
 import ResultsSummary from '@/components/shared/ResultsSummary';
 import SocialShareButtons from '@/components/shared/SocialShareButtons';
+import AlertsContainer from '@/components/shared/AlertsContainer';
 import { useDiagnosisSession } from '@/lib/hooks/useDiagnosisSession';
 import { SubscriptionService } from '@/lib/services/SubscriptionService';
 import { calculateDiagnosis } from '@/lib/calculations/CalculationService';
-import { saveDiagnosisResult } from '@/lib/storage/StorageService';
-import { Subscription } from '@/types';
+import { saveDiagnosisResult, getDiagnosisHistory } from '@/lib/storage/StorageService';
+import { AlertService } from '@/lib/services/AlertService';
+import { Subscription, AlertNotification } from '@/types';
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -27,6 +29,7 @@ export default function ResultsPage() {
   const [subscriptionDetails, setSubscriptionDetails] = useState<Record<string, Subscription>>({});
   const [servicesLoading, setServicesLoading] = useState(true);
   const [localDiagnosisResult, setLocalDiagnosisResult] = useState(diagnosisResult);
+  const [alerts, setAlerts] = useState<AlertNotification[]>([]);
   
   // Sync local state with hook state
   useEffect(() => {
@@ -69,6 +72,18 @@ export default function ResultsPage() {
           const result = calculateDiagnosis(userSubscriptions, services);
           setLocalDiagnosisResult(result);
           saveDiagnosisResult(result);
+          
+          // Generate alerts based on the new result
+          const history = getDiagnosisHistory();
+          const previousResult = history.length > 1 ? history[1] : undefined;
+          const generatedAlerts = AlertService.generateAlerts(result, previousResult);
+          setAlerts(generatedAlerts);
+        } else if (diagnosisResult) {
+          // Generate alerts for existing result
+          const history = getDiagnosisHistory();
+          const previousResult = history.length > 1 ? history[1] : undefined;
+          const generatedAlerts = AlertService.generateAlerts(diagnosisResult, previousResult);
+          setAlerts(generatedAlerts);
         }
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -154,6 +169,18 @@ export default function ResultsPage() {
               サブスクリプションの使用状況を分析しました
             </p>
           </div>
+
+          {/* Alerts Section */}
+          {alerts.length > 0 && (
+            <div className="mb-8">
+              <AlertsContainer 
+                alerts={alerts}
+                displayMode="banner"
+                maxVisible={3}
+                onAlertsChange={setAlerts}
+              />
+            </div>
+          )}
 
           {/* Chart Visualization */}
           {localDiagnosisResult && (
