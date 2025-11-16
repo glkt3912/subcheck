@@ -234,6 +234,7 @@ describe('Background Sync', () => {
   it('should register background sync when available', async () => {
     const backgroundSyncRegistration = {
       sync: {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         register: vi.fn((_tag: string) => Promise.resolve())
       }
     };
