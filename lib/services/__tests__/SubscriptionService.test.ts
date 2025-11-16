@@ -8,7 +8,9 @@ const mockStorage = {
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
-  clear: vi.fn()
+  clear: vi.fn(),
+  key: vi.fn(),
+  length: 0
 };
 
 // モック設定

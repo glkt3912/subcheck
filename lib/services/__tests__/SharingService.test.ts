@@ -103,6 +103,7 @@ describe("SharingService", () => {
 
     it("タイトルなしでも正常に動作する", () => {
       const shareData: ShareData = {
+        title: "",
         text: "テストテキストのみ"
       };
 
