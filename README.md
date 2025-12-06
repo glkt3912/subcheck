@@ -16,8 +16,7 @@ SubCheckは、あなたのサブスクリプション利用状況を診断し、
 <!-- TODO: スクリーンショット追加予定 -->
 > デモ画像は準備中です
 
-<!-- TODO: ライブデモURL追加 -->
-**🚀 Live Demo:** デプロイ準備中
+**🚀 Live Demo:** https://subcheck-bdl41vefr-glkt3912s-projects.vercel.app
 
 ## 💡 解決する問題
 
