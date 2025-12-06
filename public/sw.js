@@ -238,15 +238,60 @@ async function syncDiagnosisData() {
 }
 
 // IndexedDB helpers for offline data storage
+const DB_NAME = 'subcheck-db';
+const DB_VERSION = 1;
+const STORE_NAME = 'pending-diagnosis-sync';
+
+async function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        store.createIndex('synced', 'synced', { unique: false });
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+    };
+  });
+}
+
 async function getPendingDiagnosisData() {
-  // This would integrate with IndexedDB
-  // For now, return empty array
-  return [];
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const index = store.index('synced');
+
+    return new Promise((resolve, reject) => {
+      const request = index.getAll(false); // Get all unsynced items
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('[SW] Failed to get pending diagnosis data:', error);
+    return [];
+  }
 }
 
 async function removePendingDiagnosisData(id) {
-  // This would remove from IndexedDB
-  console.log("[SW] Would remove pending data:", id);
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+
+    return new Promise((resolve, reject) => {
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('[SW] Failed to remove pending diagnosis data:', error);
+  }
 }
 
 // Handle push notifications (for future alert functionality)

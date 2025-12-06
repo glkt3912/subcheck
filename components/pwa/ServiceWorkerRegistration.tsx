@@ -41,10 +41,20 @@ export default function ServiceWorkerRegistration() {
         const isOnline = navigator.onLine;
         document.body.classList.toggle('offline', !isOnline);
         
-        if (isOnline) {
-          // Note: Background sync is temporarily disabled due to TypeScript strict mode issues
-          // The feature can be re-enabled once proper type definitions are available
-          console.log('[PWA] Network restored - background sync would trigger here');
+        if (isOnline && 'serviceWorker' in navigator) {
+          // Trigger background sync when network is restored
+          navigator.serviceWorker.ready
+            .then((registration) => {
+              if ('sync' in registration) {
+                return registration.sync.register('diagnosis-sync');
+              }
+            })
+            .then(() => {
+              console.log('[PWA] Background sync registered');
+            })
+            .catch((error) => {
+              console.error('[PWA] Background sync registration failed:', error);
+            });
         }
       };
 

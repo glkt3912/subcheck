@@ -2,38 +2,20 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { DiagnosisResult } from "@/types";
-
-interface OfflineData {
-  id: string;
-  timestamp: number;
-  data: DiagnosisResult;
-  synced: boolean;
-}
+import { indexedDBService, PendingDiagnosisData } from "@/lib/storage/IndexedDBService";
 
 export function useOfflineSync() {
   const [isOnline, setIsOnline] = useState(true);
-  const [pendingSync, setPendingSync] = useState<OfflineData[]>([]);
+  const [pendingSync, setPendingSync] = useState<PendingDiagnosisData[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Load pending sync data from localStorage
-  const loadPendingData = useCallback(() => {
+  // Load pending sync data from IndexedDB
+  const loadPendingData = useCallback(async () => {
     try {
-      const storedData = localStorage.getItem("subcheck-pending-sync");
-      if (storedData) {
-        const parsed = JSON.parse(storedData) as OfflineData[];
-        setPendingSync(parsed.filter((item) => !item.synced));
-      }
+      const data = await indexedDBService.getPendingDiagnosisData();
+      setPendingSync(data);
     } catch (error) {
       console.error("[OfflineSync] Failed to load pending data:", error);
-    }
-  }, []);
-
-  // Save pending data to localStorage
-  const savePendingData = useCallback((data: OfflineData[]) => {
-    try {
-      localStorage.setItem("subcheck-pending-sync", JSON.stringify(data));
-    } catch (error) {
-      console.error("[OfflineSync] Failed to save pending data:", error);
     }
   }, []);
 
@@ -46,9 +28,9 @@ export function useOfflineSync() {
     setIsSyncing(true);
 
     try {
-      const unsyncedData = pendingSync.filter((item) => !item.synced);
+      for (const item of pendingSync) {
+        if (item.synced) continue;
 
-      for (const item of unsyncedData) {
         try {
           // Simulate API call to sync diagnosis result
           // In a real app, this would be an actual API endpoint
@@ -57,46 +39,23 @@ export function useOfflineSync() {
           // For now, just mark as synced after a delay
           await new Promise((resolve) => setTimeout(resolve, 1000));
 
-          // Mark as synced
-          item.synced = true;
+          // Mark as synced in IndexedDB
+          await indexedDBService.markAsSynced(item.id);
 
           console.log("[OfflineSync] Data synced successfully:", item.id);
         } catch (error) {
           console.error("[OfflineSync] Failed to sync item:", item.id, error);
-          // Leave item as unsynced for retry
         }
       }
 
-      // Update storage with sync status
-      const updatedPending = pendingSync.map((item) => {
-        const updated = unsyncedData.find((u) => u.id === item.id);
-        return updated || item;
-      });
-
-      setPendingSync(updatedPending);
-      savePendingData(updatedPending);
-
-      // Clean up old synced items (keep only last 10)
-      const syncedItems = updatedPending.filter((item) => item.synced);
-      if (syncedItems.length > 10) {
-        const itemsToKeep = syncedItems
-          .sort((a, b) => b.timestamp - a.timestamp)
-          .slice(0, 10);
-
-        const finalPending = [
-          ...updatedPending.filter((item) => !item.synced),
-          ...itemsToKeep,
-        ];
-
-        setPendingSync(finalPending);
-        savePendingData(finalPending);
-      }
+      // Reload pending data after sync
+      await loadPendingData();
     } catch (error) {
       console.error("[OfflineSync] Sync failed:", error);
     } finally {
       setIsSyncing(false);
     }
-  }, [isOnline, isSyncing, pendingSync, savePendingData]);
+  }, [isOnline, isSyncing, pendingSync, loadPendingData]);
 
   // Initialize online status
   useEffect(() => {
@@ -128,28 +87,23 @@ export function useOfflineSync() {
 
   // Add data to offline queue
   const queueForSync = useCallback(
-    (diagnosisResult: DiagnosisResult) => {
-      const offlineData: OfflineData = {
-        id: `diagnosis-${Date.now()}-${Math.random()
-          .toString(36)
-          .substr(2, 9)}`,
-        timestamp: Date.now(),
-        data: diagnosisResult,
-        synced: false,
-      };
+    async (diagnosisResult: DiagnosisResult) => {
+      try {
+        await indexedDBService.addPendingDiagnosisData(diagnosisResult);
+        await loadPendingData();
 
-      const updatedPending = [...pendingSync, offlineData];
-      setPendingSync(updatedPending);
-      savePendingData(updatedPending);
+        // If online, try to sync immediately
+        if (isOnline) {
+          syncPendingData();
+        }
 
-      // If online, try to sync immediately
-      if (isOnline) {
-        syncPendingData();
+        return `diagnosis-${Date.now()}`;
+      } catch (error) {
+        console.error("[OfflineSync] Failed to queue for sync:", error);
+        throw error;
       }
-
-      return offlineData.id;
     },
-    [pendingSync, isOnline, savePendingData, syncPendingData]
+    [isOnline, loadPendingData, syncPendingData]
   );
 
   // Get offline capability status
@@ -170,10 +124,10 @@ export function useOfflineSync() {
   }, [isOnline, isSyncing, syncPendingData]);
 
   // Clear all pending data (for testing or reset)
-  const clearPendingData = useCallback(() => {
-    setPendingSync([]);
+  const clearPendingData = useCallback(async () => {
     try {
-      localStorage.removeItem("subcheck-pending-sync");
+      await indexedDBService.clearAll();
+      setPendingSync([]);
     } catch (error) {
       console.error("[OfflineSync] Failed to clear pending data:", error);
     }
