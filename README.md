@@ -1,11 +1,44 @@
 # SubCheck PWA - サブスク診断アプリ
 
-![Next.js](https://img.shields.io/badge/Next.js-14+-black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)
-![PWA Ready](https://img.shields.io/badge/PWA-Ready-green)
-![License](https://img.shields.io/badge/License-BSL--1.1-orange)
+[![Next.js](https://img.shields.io/badge/Next.js-14+-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![PWA Ready](https://img.shields.io/badge/PWA-Ready-green?logo=pwa)](https://web.dev/progressive-web-apps/)
+[![License](https://img.shields.io/badge/License-BSL--1.1-orange)](LICENSE)
+![GitHub Stars](https://img.shields.io/github/stars/glkt3912/subcheck?style=social)
+![GitHub Forks](https://img.shields.io/github/forks/glkt3912/subcheck?style=social)
+
+> **年間平均5万円の節約**を実現するサブスクリプション診断ツール
 
 SubCheckは、あなたのサブスクリプション利用状況を診断し、年間の無駄遣いを可視化するProgressive Web Application (PWA)です。
+
+## 📸 Demo
+
+<!-- TODO: スクリーンショット追加予定 -->
+> デモ画像は準備中です
+
+<!-- TODO: ライブデモURL追加 -->
+**🚀 Live Demo:** デプロイ準備中
+
+## 💡 解決する問題
+
+- 🤔 「どのサブスクに入っているか忘れた」
+- 💸 「使っていないのに課金され続けている」
+- 📊 「本当に必要なサービスか分からない」
+
+**SubCheckは、こうした悩みを3ステップで解決します。**
+
+### 💰 実際の効果（想定例）
+
+```
+Before: 月額 8,500円（年間 102,000円）
+ • Netflix    1,490円 → 月1回しか見ない
+ • Spotify    1,080円 → ほぼ使っていない
+ • Prime       600円 → 配送だけ利用
+ • その他サービス...
+
+After:  月額 4,200円（年間 50,400円）
+ 💰 年間 51,600円の節約に成功！
+```
 
 ## 🌟 主な機能
 
