@@ -5,6 +5,7 @@ import { AlertNotification } from '@/types/alert';
 // import { AlertService } from '@/lib/services/AlertService'; // Unused import
 import { AlertBanner } from './AlertBanner';
 import { AlertCard } from './AlertCard';
+import { cn } from "@/lib/utils"
 
 interface AlertsContainerProps {
   alerts: AlertNotification[];
@@ -70,16 +71,16 @@ export function AlertsContainer({
   }
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={cn("space-y-3", className)}>
       {/* Header with clear all option for multiple alerts */}
       {visibleAlerts.length > 1 && (
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-sm font-medium text-gray-700">
+        <div className={cn("flex justify-between items-center mb-2")}> 
+          <h3 className={cn("text-sm font-medium text-gray-700")}> 
             通知 ({visibleAlerts.length}件)
           </h3>
           <button
             onClick={clearAllAlerts}
-            className="text-xs text-gray-500 hover:text-gray-700 underline"
+            className={cn("text-xs text-gray-500 hover:text-gray-700 underline")}
           >
             すべて消去
           </button>
@@ -87,7 +88,7 @@ export function AlertsContainer({
       )}
 
       {/* Alert List */}
-      <div className="space-y-2">
+      <div className={cn("space-y-2")}> 
         {visibleAlerts.map((alert, index) => {
           // Show critical alerts as banners for immediate attention
           const shouldUseBanner = (
@@ -107,7 +108,7 @@ export function AlertsContainer({
                 key={alert.id}
                 alert={alert}
                 onDismiss={handleAlertDismiss}
-                className="animate-fadeIn"
+                className={cn("animate-fadeIn")}
               />
             );
           }
@@ -119,7 +120,7 @@ export function AlertsContainer({
                 alert={alert}
                 onDismiss={handleAlertDismiss}
                 expanded={index === 0 && alert.severity === 'critical'} // Auto-expand first critical alert
-                className="animate-fadeIn"
+                className={cn("animate-fadeIn")}
               />
             );
           }
@@ -130,8 +131,8 @@ export function AlertsContainer({
 
       {/* Show truncation indicator if there are more alerts */}
       {alerts.length > maxVisible && (
-        <div className="text-center">
-          <p className="text-xs text-gray-500">
+        <div className={cn("text-center")}> 
+          <p className={cn("text-xs text-gray-500")}> 
             他に{alerts.length - maxVisible}件の通知があります
           </p>
         </div>

@@ -3,6 +3,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from "@/lib/utils"
 
 interface Props {
   children: ReactNode;
@@ -75,28 +76,29 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-          <Card className="w-full max-w-lg">
+        <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 p-4")}> 
+          <Card className={cn("w-full max-w-lg")}> 
             <CardHeader>
-              <CardTitle className="text-red-600 flex items-center gap-2">
+              <CardTitle className={cn("text-red-600 flex items-center gap-2")}> 
                 ⚠️ エラーが発生しました
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-gray-700">
-                <p className="mb-3">
+            <CardContent className={cn("space-y-4")}> 
+              <div className={cn("text-gray-700")}> 
+                <p className={cn("mb-3")}> 
                   申し訳ございません。予期しないエラーが発生しました。
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className={cn("text-sm text-gray-600")}> 
                   以下のいずれかの方法をお試しください：
                 </p>
               </div>
 
-              <div className="space-y-2">
+              <div className={cn("space-y-2")}> 
                 <Button 
                   onClick={this.handleReset}
                   variant="outline"
-                  className="w-full"
+                  size="default"
+                  className={cn("w-full")}
                 >
                   🔄 再試行
                 </Button>
@@ -104,7 +106,8 @@ export class ErrorBoundary extends Component<Props, State> {
                 <Button 
                   onClick={this.handleReload}
                   variant="outline"
-                  className="w-full"
+                  size="default"
+                  className={cn("w-full")}
                 >
                   🔃 ページを再読み込み
                 </Button>
@@ -112,18 +115,19 @@ export class ErrorBoundary extends Component<Props, State> {
                 <Button 
                   onClick={this.handleClearData}
                   variant="destructive"
-                  className="w-full"
+                  size="default"
+                  className={cn("w-full")}
                 >
                   🗑️ データをクリアして最初から
                 </Button>
               </div>
 
               {process.env.NODE_ENV === 'development' && this.state.error && (
-                <details className="mt-4 p-3 bg-gray-100 rounded text-xs">
-                  <summary className="cursor-pointer font-medium text-gray-700">
+                <details className={cn("mt-4 p-3 bg-gray-100 rounded text-xs")}> 
+                  <summary className={cn("cursor-pointer font-medium text-gray-700")}> 
                     開発者向け情報
                   </summary>
-                  <div className="mt-2 space-y-2">
+                  <div className={cn("mt-2 space-y-2")}> 
                     <div>
                       <strong>Error:</strong> {this.state.error.message}
                     </div>

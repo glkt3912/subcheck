@@ -2,6 +2,7 @@
 
 import { memo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, PieLabelRenderProps } from 'recharts';
+import { cn } from "@/lib/utils";
 
 interface ChartData {
   name: string;
@@ -20,14 +21,14 @@ interface DiagnosisChartProps {
 const DiagnosisChart = memo(({ data }: DiagnosisChartProps) => {
   if (data.length === 0) {
     return (
-      <div className="h-80 flex items-center justify-center text-gray-500">
+      <div className={cn("h-80 flex items-center justify-center text-gray-500")}> 
         データがありません
       </div>
     );
   }
 
   return (
-    <div className="h-80">
+    <div className={cn("h-80")}> 
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
