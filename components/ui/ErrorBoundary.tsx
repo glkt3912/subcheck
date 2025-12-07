@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from "@/lib/utils"
@@ -93,30 +93,24 @@ export class ErrorBoundary extends Component<Props, State> {
                 </p>
               </div>
 
-              <div className={cn("space-y-2")}> 
-                <Button 
+              <div className={cn("space-y-2")}>
+                <Button
                   onClick={this.handleReset}
-                  variant="outline"
-                  size="default"
                   className={cn("w-full")}
                 >
                   🔄 再試行
                 </Button>
-                
-                <Button 
+
+                <Button
                   onClick={this.handleReload}
-                  variant="outline"
-                  size="default"
-                  className={cn("w-full")}
+                  className={cn("w-full border border-gray-300 bg-white hover:bg-gray-50 text-gray-900")}
                 >
                   🔃 ページを再読み込み
                 </Button>
-                
-                <Button 
+
+                <Button
                   onClick={this.handleClearData}
-                  variant="destructive"
-                  size="default"
-                  className={cn("w-full")}
+                  className={cn("w-full bg-red-600 hover:bg-red-700 text-white")}
                 >
                   🗑️ データをクリアして最初から
                 </Button>
